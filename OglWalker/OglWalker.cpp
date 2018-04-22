@@ -7,6 +7,7 @@
 #define MAX_LOADSTRING 100
 #define PI 3.14159f
 #define DEG2RAD(x) (x * PI / 180.0f)
+#define CUSTOM_QUIT (WM_USER + 1)
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -83,6 +84,7 @@ void SetOrtho(int w, int h)
 }
 
 void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz, float ex, float ez)
+//void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
 	glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -94,8 +96,8 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation, float 
 	glRotatef(azimuth, 0.0f, 1.0f, 0.0);
 
 	float erad = DEG2RAD(azimuth);
-	GLfloat eex = cos(erad);
-	GLfloat eez = sin(erad);
+	GLfloat eex = cosf(erad);
+	GLfloat eez = sinf(erad);
 	glRotatef(elevation, eex, 0.0f, eez);
 	glTranslatef(px, -6.0f, pz);
 
@@ -172,11 +174,15 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	LARGE_INTEGER perfFreq;
 
 	QueryPerformanceFrequency(&perfFreq);
-	fprintf(log, "perf freq %li\n", perfFreq.LowPart);
+	fprintf(log, "perf freq %lli\n", perfFreq.QuadPart);
 
-	DWORD lastCount = 0;
+	LONGLONG lastCount = 0;
 	unsigned char keystate[256];
 	DIMOUSESTATE mouseState;
+
+	GLfloat ex = 0.0f;
+	GLfloat ez = 0.0f;
+	float moveDir = 0.0f, erad = 0.0f;
 
 	fprintf(log, "start loop\n");
 	while (1) {
@@ -188,11 +194,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 		QueryPerformanceCounter(&perfCount);
 
-		float fps = (float)perfFreq.LowPart / (float)(perfCount.LowPart - lastCount);
-		lastCount = perfCount.LowPart;
-		float erad = DEG2RAD(azimuth);
-		GLfloat ex = sin(erad);
-		GLfloat ez = cos(erad);
+		float fps = (float)perfFreq.QuadPart / (float)(perfCount.QuadPart - lastCount);
+		lastCount = perfCount.QuadPart;
 
 		if (TRUE == ctx->useDI) {
 			if (TRUE == ReadMouseState(&mouseState))
@@ -200,35 +203,73 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 				//fprintf(log, "mouse %i, %i, %i\n", mouseState.lX, mouseState.lY, mouseState.lZ);
 				azimuth += (mouseState.lX / 8.0f);
 				if (azimuth < 0.0f) azimuth = azimuth + 360.0f;
-				if (azimuth >= 360.0f) azimuth = 360.0f - azimuth;
+				if (azimuth > 360.0f) azimuth = azimuth - 360.0f;
 
 				elevation += (mouseState.lY / 8.0f);
 				if (elevation < -90.0f) elevation = -90.0f;
 				if (elevation > 90.0f) elevation = 90.0f;
 			}
+
 			if (TRUE == ReadKeyboardState(&keystate[0]))
 			{
 				fprintf(log, "esc = %i\n", keystate[DIK_ESCAPE]);
 				if (keystate[DIK_ESCAPE] == (unsigned char)128) {
-					PostMessage(ctx->hWnd, (WM_USER + 1), 0, 0);
+					PostMessage(ctx->hWnd, CUSTOM_QUIT, 0, 0);
 				}
 
-				if (keystate[DIK_A] == (unsigned char)128) {
-					px += 0.01 * ez;
-					pz -= 0.01 * ex;
-				}
-				if (keystate[DIK_D] == (unsigned char)128) {
-					px -= 0.01 * ez;
-					pz += 0.01 * ex;
-				}
+				ex = ez = 0.0f;
+				
 				if (keystate[DIK_W] == (unsigned char)128) {
-					px -= 0.01 * ex;
-					pz += 0.01 * ez;
+					if (keystate[DIK_A] == (unsigned char)128) {
+						moveDir = azimuth - 45.0f;
+						erad = DEG2RAD(moveDir);
+						ex = sinf(erad);
+						ez = cosf(erad);
+					}
+					else if (keystate[DIK_D] == (unsigned char)128) {
+						moveDir = azimuth + 45.0f;
+						erad = DEG2RAD(moveDir);
+						ex = sinf(erad);
+						ez = cosf(erad);
+					}
+					else {
+						moveDir = azimuth;
+						erad = DEG2RAD(moveDir);
+						ex = sinf(erad);
+						ez = cosf(erad);
+					}
+				} else if (keystate[DIK_S] == (unsigned char)128) {
+					if (keystate[DIK_A] == (unsigned char)128) {
+						moveDir = azimuth - 135.0f;
+						erad = DEG2RAD(moveDir);
+						ex = sinf(erad);
+						ez = cosf(erad);
+					}
+					else if (keystate[DIK_D] == (unsigned char)128) {
+						moveDir = azimuth + 135.0f;
+						erad = DEG2RAD(moveDir);
+						ex = sinf(erad);
+						ez = cosf(erad);
+					}
+					else {
+						moveDir = azimuth + 180.0f;
+						erad = DEG2RAD(moveDir);
+						ex = sinf(erad);
+						ez = cosf(erad);
+					}
+				} else if (keystate[DIK_A] == (unsigned char)128) {
+					moveDir = azimuth - 90.0f;
+					erad = DEG2RAD(moveDir);
+					ex = sinf(erad);
+					ez = cosf(erad);
+				} else if (keystate[DIK_D] == (unsigned char)128) {
+					moveDir = azimuth + 90.0f;
+					erad = DEG2RAD(moveDir);
+					ex = sinf(erad);
+					ez = cosf(erad);
 				}
-				if (keystate[DIK_S] == (unsigned char)128) {
-					px += 0.01 * ex;
-					pz -= 0.01 * ez;
-				}
+				pz += 0.01f * ez;
+				px -= 0.01f * ex;
 			}
 		}
 
@@ -412,27 +453,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
-	case WM_MOUSEMOVE:
-	{
-		int mx = LOWORD(lParam);
-		int my = HIWORD(lParam);
-	}
-	break;
     case WM_PAINT:
         {
-            //PAINTSTRUCT ps;
-            //HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            //EndPaint(hWnd, &ps);
 			ValidateRect(hWnd, NULL);
         }
         break;
-	case (WM_USER + 1):
+	case CUSTOM_QUIT:
     case WM_DESTROY:
 		{
-			// TODO
-			// signal thread to stop
-			// wait for thread
 			SetEvent(g_ctx.hQuitEvent);
 			WaitForSingleObject(hRenderingThread, INFINITE);
 			if (TRUE == useDI) {
@@ -590,7 +618,7 @@ FontPuts(GLFONT     *font, /* I - Font to use */
 
 	glPushAttrib(GL_LIST_BIT);
 	glListBase(font->base);
-	glCallLists(strlen(s), GL_UNSIGNED_BYTE, s);
+	glCallLists((GLsizei)strlen(s), GL_UNSIGNED_BYTE, s);
 	glPopAttrib();
 }
 
@@ -615,7 +643,7 @@ FontPrintf(GLFONT     *font,   /* I - Font to use */
 
 	/* Format the string */
 	va_start(ap, format);
-	vsprintf((char *)s, format, ap);
+	vsprintf_s((char *)s, 1024, format, ap);
 	va_end(ap);
 
 	/* Figure out the width of the string in pixels... */

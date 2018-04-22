@@ -24,3 +24,4 @@
 #include <stdio.h>
 #include <math.h>
 #include <dinput.h>
+#include <float.h>
