@@ -25,3 +25,6 @@
 #include <math.h>
 #include <dinput.h>
 #include <float.h>
+#include <vector>
+#include "I3DObject.h"
+#include "CubeObject.h"

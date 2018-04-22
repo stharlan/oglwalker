@@ -61,6 +61,8 @@ void SetupRC()
 	glEnable(GL_LINE_SMOOTH);
 	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_POLYGON_SMOOTH);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_CW);
 }
 
 void SetPerspective(int w, int h)
@@ -83,45 +85,68 @@ void SetOrtho(int w, int h)
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz, float ex, float ez)
+void RenderScene(int w, int h, float fps, float azimuth, float elevation, 
+	float px, float pz, float ex, float ez, I3DObject** pDrawableObjects, DWORD objCt)
 //void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
-	glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	SetPerspective(w, h);
-
+	
+	// create a grid of triangles as a "floor"
 	glPushMatrix();
-	glLoadIdentity();
-	glRotatef(azimuth, 0.0f, 1.0f, 0.0);
+	{
+		glLoadIdentity();
 
-	float erad = DEG2RAD(azimuth);
-	GLfloat eex = cosf(erad);
-	GLfloat eez = sinf(erad);
-	glRotatef(elevation, eex, 0.0f, eez);
-	glTranslatef(px, -6.0f, pz);
+		// direction look l/r
+		glRotatef(azimuth, 0.0f, 1.0f, 0.0);
 
-	// do 3d stuff here
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glBegin(GL_TRIANGLES);
-	glLineWidth(1.0f);
-	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
-		for(float z = -50.0f; z<50.0f; z += 5.0f) {
-			glVertex3f(x, 0.0f, z);
-			glVertex3f(x + 5.0f, 0.0f, z);
-			glVertex3f(x + 5.0f, 0.0f, z + 5.0f);
-			glVertex3f(x, 0.0f, z);
-			glVertex3f(x + 5.0f, 0.0f, z + 5.0f);
-			glVertex3f(x, 0.0f, z + 5.0f);
+		float erad = DEG2RAD(azimuth);
+		GLfloat eex = cosf(erad);
+		GLfloat eez = sinf(erad);
+
+		// elevation look u/d
+		glRotatef(elevation, eex, 0.0f, eez);
+
+		// position x/y
+		glTranslatef(px, -6.0f, pz);
+
+		// draw the grid (white)
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glPolygonMode(GL_FRONT, GL_LINE);
+		glBegin(GL_TRIANGLES);
+		glLineWidth(1.0f);
+		for (float x = -50.0f; x < 50.0f; x += 5.0f) {
+			for (float z = -50.0f; z < 50.0f; z += 5.0f) {
+				glVertex3f(x, 0.0f, z);
+				glVertex3f(x + 5.0f, 0.0f, z + 5.0f);
+				glVertex3f(x + 5.0f, 0.0f, z);
+				glVertex3f(x, 0.0f, z);
+				glVertex3f(x, 0.0f, z + 5.0f);
+				glVertex3f(x + 5.0f, 0.0f, z + 5.0f);
+			}
 		}
-	}
-	glEnd();
+		glEnd();
 
+		for (DWORD o = 0; o < objCt; o++) {
+			pDrawableObjects[o]->Draw();
+		}
+
+		glPushMatrix();
+		{
+			glTranslatef(-10.0f, 10.0f, -10.0f);
+			GLUquadric* pquad = gluNewQuadric();
+			gluSphere(pquad, 5, 10, 10);
+			gluDeleteQuadric(pquad);
+		}
+		glPopMatrix();
+
+	}
 	glPopMatrix();
 
+	// create a "crosshair" in the middle of the screen
 	SetOrtho(w, h); 
-
 	glColor3f(0.0f, 1.0f, 0.0f);
 	glLineWidth(1.0f);
 	glBegin(GL_LINES);
@@ -131,6 +156,8 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation, float 
 	glVertex2i(w / 2, (h / 2) + 10);
 	glEnd();
 
+	// draw some text on the screen
+	// debugging messages - for now
 	glColor3f(1.0f, 1.0f, 1.0f);
 	glRasterPos2i(4, 18);
 	FontPrintf(pFont, 1, "hello world %i", (int)fps);
@@ -138,7 +165,7 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation, float 
 	glRasterPos2i((w / 2) + 10, (h / 2) + 10);
 	FontPrintf(pFont, 1, "%.0f degrees", azimuth);
 
-	glRasterPos2i((w / 2) + 10, (h / 2) + 20);
+	glRasterPos2i((w / 2) + 10, (h / 2) + 24);
 	FontPrintf(pFont, 1, "%.4f, %.4f", ex, ez);
 
 	glFinish();
@@ -148,6 +175,12 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation, float 
 DWORD WINAPI RenderingThreadEntryPoint(void* pVoid) 
 {
 	RENDER_THREAD_CONTEXT* ctx = (RENDER_THREAD_CONTEXT*)pVoid;
+
+	DWORD ObjCount = 3;
+	I3DObject* DrawableObjects[3];
+	DrawableObjects[0] = reinterpret_cast<I3DObject*>(new CubeObject(10, 0, 10, 10, 10, 1));
+	DrawableObjects[1] = reinterpret_cast<I3DObject*>(new CubeObject(10, 0, 20, 10, 10, 1));
+	DrawableObjects[2] = reinterpret_cast<I3DObject*>(new CubeObject(10, 10, 10, 10, 1, 11));
 
 	float azimuth = 0.0f;
 	float elevation = 0.0f;
@@ -273,7 +306,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			}
 		}
 
-		RenderScene(rect.right, rect.bottom, fps, azimuth, elevation, px, pz, ex, ez);
+		RenderScene(rect.right, rect.bottom, fps, azimuth, elevation, px, pz, ex, ez, DrawableObjects, ObjCount);
 
 		SwapBuffers(hdc);
 	}
@@ -432,10 +465,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			hRenderingThread = (HANDLE)CreateThread(NULL, 0, RenderingThreadEntryPoint, (LPVOID)&g_ctx, 0, &RenderThreadId);
 		}
 		break;
-	//case WM_SIZE:
-	//	fprintf(g_log, "resizing\n");
-	//	ChangeSize(LOWORD(lParam), HIWORD(lParam));
-	//	break;
 	case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);

@@ -30,12 +30,24 @@
     <ClInclude Include="OglWalker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CubeObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="I3DObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="OglWalker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CubeObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="I3DObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

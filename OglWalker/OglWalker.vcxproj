@@ -142,12 +142,16 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CubeObject.h" />
+    <ClInclude Include="I3DObject.h" />
     <ClInclude Include="OglWalker.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CubeObject.cpp" />
+    <ClCompile Include="I3DObject.cpp" />
     <ClCompile Include="OglWalker.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
