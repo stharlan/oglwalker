@@ -332,6 +332,10 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		std::vector<value> result_n;
 		rtree.query(boost::geometry::index::nearest(point(px, 0.0f, pz), 1), std::back_inserter(result_n));
 
+		// find some triangles
+		// see if any are below our point
+		// with ray intersects triangle
+
 		RenderScene(rect.right, rect.bottom, 
 			fps, 
 			azimuth, elevation, 

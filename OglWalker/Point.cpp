@@ -34,3 +34,17 @@ void Point::Set(float px, float py, float pz)
 	this->y = py;
 	this->z = pz;
 }
+
+Point& Point::crossProduct(Point& v)
+{
+	return Point(
+		(this->y * v.z) - (this->z * v.y),
+		(this->x * v.z) - (this->z * v.x),
+		(this->x * v.y) - (this->y * v.x)
+	);
+}
+
+float Point::dotProduct(Point& v)
+{
+	return ((this->x * v.x) + (this->y * v.y) + (this->z * v.z));
+}

@@ -145,6 +145,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CubeObject.h" />
+    <ClInclude Include="GeometryOperations.h" />
     <ClInclude Include="I3DObject.h" />
     <ClInclude Include="OglWalker.h" />
     <ClInclude Include="Point.h" />
@@ -155,6 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CubeObject.cpp" />
+    <ClCompile Include="GeometryOperations.cpp" />
     <ClCompile Include="I3DObject.cpp" />
     <ClCompile Include="OglWalker.cpp" />
     <ClCompile Include="Point.cpp" />

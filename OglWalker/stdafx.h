@@ -37,4 +37,5 @@
 #include "Point.h"
 #include "Triangle.h"
 #include "CubeObject.h"
+#include "GeometryOperations.h"
 
