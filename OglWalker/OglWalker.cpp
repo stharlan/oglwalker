@@ -28,6 +28,11 @@ typedef struct {
 
 RENDER_THREAD_CONTEXT g_ctx;
 
+typedef boost::geometry::model::point<float, 3, boost::geometry::cs::cartesian> point;
+typedef boost::geometry::model::box<point> box;
+typedef boost::geometry::model::ring<point> bring;
+typedef std::pair<box, std::pair<Triangle, Triangle> > value;
+
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 HWND                InitInstance(HINSTANCE, int);
@@ -86,7 +91,8 @@ void SetOrtho(int w, int h)
 }
 
 void RenderScene(int w, int h, float fps, float azimuth, float elevation, 
-	float px, float pz, float ex, float ez, I3DObject** pDrawableObjects, DWORD objCt)
+	float px, float pz, float ex, float ez, I3DObject** pDrawableObjects, DWORD objCt, 
+	std::vector<Triangle> &Floor)
 //void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -117,16 +123,8 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 		glPolygonMode(GL_FRONT, GL_LINE);
 		glBegin(GL_TRIANGLES);
 		glLineWidth(1.0f);
-		for (float x = -50.0f; x < 50.0f; x += 5.0f) {
-			for (float z = -50.0f; z < 50.0f; z += 5.0f) {
-				glVertex3f(x, 0.0f, z);
-				glVertex3f(x + 5.0f, 0.0f, z + 5.0f);
-				glVertex3f(x + 5.0f, 0.0f, z);
-				glVertex3f(x, 0.0f, z);
-				glVertex3f(x, 0.0f, z + 5.0f);
-				glVertex3f(x + 5.0f, 0.0f, z + 5.0f);
-			}
-		}
+		for (std::vector<Triangle>::iterator iter = Floor.begin(); iter != Floor.end(); ++iter)
+			iter->Draw();
 		glEnd();
 
 		for (DWORD o = 0; o < objCt; o++) {
@@ -175,6 +173,30 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 DWORD WINAPI RenderingThreadEntryPoint(void* pVoid) 
 {
 	RENDER_THREAD_CONTEXT* ctx = (RENDER_THREAD_CONTEXT*)pVoid;
+
+	// create the rtree using default constructor
+	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> > rtree;
+
+	std::vector<Triangle> Floor;
+	unsigned int ctr = 0;
+	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
+		for (float z = -50.0f; z < 50.0f; z += 5.0f) {
+			Point p1(x, 0.0f, z);			
+			Point p2(x + 5.0f, 0.0f, z + 5.0f);
+			Point p3(x + 5.0f, 0.0f, z);
+			Triangle t1(p1, p2, p3);
+			Floor.push_back(t1);
+
+			Point p4(x, 0.0f, z);
+			Point p5(x, 0.0f, z + 5.0f);
+			Point p6(x + 5.0f, 0.0f, z + 5.0f);
+			Triangle t2(p4, p5, p6);
+			Floor.push_back(t2);
+
+			box b1{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
+			rtree.insert(std::make_pair(b1, std::make_pair(t1, t2) ));
+		}
+	}
 
 	DWORD ObjCount = 3;
 	I3DObject* DrawableObjects[3];
@@ -306,7 +328,16 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			}
 		}
 
-		RenderScene(rect.right, rect.bottom, fps, azimuth, elevation, px, pz, ex, ez, DrawableObjects, ObjCount);
+		// find 5 nearest values to a point
+		std::vector<value> result_n;
+		rtree.query(boost::geometry::index::nearest(point(px, 0.0f, pz), 1), std::back_inserter(result_n));
+
+		RenderScene(rect.right, rect.bottom, 
+			fps, 
+			azimuth, elevation, 
+			px, pz, 
+			ex, ez, 
+			DrawableObjects, ObjCount, Floor);
 
 		SwapBuffers(hdc);
 	}

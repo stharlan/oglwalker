@@ -26,5 +26,15 @@
 #include <dinput.h>
 #include <float.h>
 #include <vector>
+
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/point.hpp>
+#include <boost/geometry/geometries/box.hpp>
+
+#include <boost/geometry/index/rtree.hpp>
+
 #include "I3DObject.h"
+#include "Point.h"
+#include "Triangle.h"
 #include "CubeObject.h"
+
