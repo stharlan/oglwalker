@@ -30,8 +30,7 @@ RENDER_THREAD_CONTEXT g_ctx;
 
 typedef boost::geometry::model::point<float, 3, boost::geometry::cs::cartesian> point;
 typedef boost::geometry::model::box<point> box;
-typedef boost::geometry::model::ring<point> bring;
-typedef std::pair<box, std::pair<Triangle, Triangle> > value;
+typedef std::pair<box, unsigned> value;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -91,8 +90,7 @@ void SetOrtho(int w, int h)
 }
 
 void RenderScene(int w, int h, float fps, float azimuth, float elevation, 
-	float px, float pz, float ex, float ez, I3DObject** pDrawableObjects, DWORD objCt, 
-	std::vector<Triangle> &Floor)
+	float px, float pz, float ex, float ez,	std::vector<Triangle> &AllTris)
 //void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -123,13 +121,9 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 		glPolygonMode(GL_FRONT, GL_LINE);
 		glBegin(GL_TRIANGLES);
 		glLineWidth(1.0f);
-		for (std::vector<Triangle>::iterator iter = Floor.begin(); iter != Floor.end(); ++iter)
+		for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
 			iter->Draw();
 		glEnd();
-
-		for (DWORD o = 0; o < objCt; o++) {
-			pDrawableObjects[o]->Draw();
-		}
 
 		glPushMatrix();
 		{
@@ -170,6 +164,34 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 
 }
 
+void AddCubeTris(CubeObject& c1,
+	std::vector<Triangle>& AllTris,
+	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> >& rtree)
+{
+	for (std::vector<Triangle>::iterator iter = c1.tris.begin(); iter != c1.tris.end(); ++iter)
+	{
+		AllTris.push_back(*iter);
+		box b{
+			{ iter->MinX(), iter->MinY(), iter->MinZ() },
+			{ iter->MaxX(), iter->MaxY(), iter->MaxZ() }
+		};
+		rtree.insert(std::make_pair(b, (unsigned)(AllTris.size() - 1)));
+	}
+}
+
+void AddSomeStuff(std::vector<Triangle>& AllTris,
+	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> >& rtree)
+{
+	CubeObject c1(10, 0, 10, 10, 10, 1);
+	AddCubeTris(c1, AllTris, rtree);
+
+	CubeObject c2(10, 0, 20, 10, 10, 1);
+	AddCubeTris(c2, AllTris, rtree);
+
+	CubeObject c3(10, 10, 10, 10, 1, 11);
+	AddCubeTris(c3, AllTris, rtree);
+}
+
 DWORD WINAPI RenderingThreadEntryPoint(void* pVoid) 
 {
 	RENDER_THREAD_CONTEXT* ctx = (RENDER_THREAD_CONTEXT*)pVoid;
@@ -177,7 +199,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	// create the rtree using default constructor
 	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> > rtree;
 
-	std::vector<Triangle> Floor;
+	std::vector<Triangle> AllTris;
+
 	unsigned int ctr = 0;
 	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
 		for (float z = -50.0f; z < 50.0f; z += 5.0f) {
@@ -185,24 +208,23 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			Point p2(x + 5.0f, 0.0f, z + 5.0f);
 			Point p3(x + 5.0f, 0.0f, z);
 			Triangle t1(p1, p2, p3);
-			Floor.push_back(t1);
+			AllTris.push_back(t1);
+
+			box b1{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
+			rtree.insert(std::make_pair(b1, (unsigned)(AllTris.size() - 1)));
 
 			Point p4(x, 0.0f, z);
 			Point p5(x, 0.0f, z + 5.0f);
 			Point p6(x + 5.0f, 0.0f, z + 5.0f);
 			Triangle t2(p4, p5, p6);
-			Floor.push_back(t2);
+			AllTris.push_back(t2);
 
-			box b1{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
-			rtree.insert(std::make_pair(b1, std::make_pair(t1, t2) ));
+			box b2{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
+			rtree.insert(std::make_pair(b2, (unsigned)(AllTris.size() - 1)));
 		}
 	}
 
-	DWORD ObjCount = 3;
-	I3DObject* DrawableObjects[3];
-	DrawableObjects[0] = reinterpret_cast<I3DObject*>(new CubeObject(10, 0, 10, 10, 10, 1));
-	DrawableObjects[1] = reinterpret_cast<I3DObject*>(new CubeObject(10, 0, 20, 10, 10, 1));
-	DrawableObjects[2] = reinterpret_cast<I3DObject*>(new CubeObject(10, 10, 10, 10, 1, 11));
+	AddSomeStuff(AllTris, rtree);
 
 	float azimuth = 0.0f;
 	float elevation = 0.0f;
@@ -341,7 +363,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			azimuth, elevation, 
 			px, pz, 
 			ex, ez, 
-			DrawableObjects, ObjCount, Floor);
+			AllTris);
 
 		SwapBuffers(hdc);
 	}

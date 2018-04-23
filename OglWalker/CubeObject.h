@@ -20,6 +20,7 @@ private:
 	float w;
 	float h;
 	float t;
+public:
 	std::vector<Triangle> tris;
 };
 
