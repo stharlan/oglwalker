@@ -89,8 +89,9 @@ void SetOrtho(int w, int h)
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void RenderScene(int w, int h, float fps, float azimuth, float elevation, 
-	float px, float pz, float ex, float ez,	std::vector<Triangle> &AllTris)
+void RenderScene(int w, int h, float fps, float azimuth, float elevation,
+	float px, float py, float pz, float ex, float ez, std::vector<Triangle> &AllTris,
+	int u1, int u2)
 //void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -114,7 +115,7 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 		glRotatef(elevation, eex, 0.0f, eez);
 
 		// position x/y
-		glTranslatef(px, -6.0f, pz);
+		glTranslatef(px, -1.0f * py, pz);
 
 		// draw the grid (white)
 		glColor3f(1.0f, 1.0f, 1.0f);
@@ -158,7 +159,7 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 	FontPrintf(pFont, 1, "%.0f degrees", azimuth);
 
 	glRasterPos2i((w / 2) + 10, (h / 2) + 24);
-	FontPrintf(pFont, 1, "%.4f, %.4f", ex, ez);
+	FontPrintf(pFont, 1, "%.4f, %.4f, pct %i, ict %i", ex, ez, u1, u2);
 
 	glFinish();
 
@@ -204,23 +205,28 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	unsigned int ctr = 0;
 	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
 		for (float z = -50.0f; z < 50.0f; z += 5.0f) {
-			Point p1(x, 0.0f, z);			
-			Point p2(x + 5.0f, 0.0f, z + 5.0f);
-			Point p3(x + 5.0f, 0.0f, z);
-			Triangle t1(p1, p2, p3);
-			AllTris.push_back(t1);
 
-			box b1{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
-			rtree.insert(std::make_pair(b1, (unsigned)(AllTris.size() - 1)));
+			if (x > 30 && z > 30) {
+			} else {
 
-			Point p4(x, 0.0f, z);
-			Point p5(x, 0.0f, z + 5.0f);
-			Point p6(x + 5.0f, 0.0f, z + 5.0f);
-			Triangle t2(p4, p5, p6);
-			AllTris.push_back(t2);
+				Point p1(x, 0.0f, z);
+				Point p2(x + 5.0f, 0.0f, z + 5.0f);
+				Point p3(x + 5.0f, 0.0f, z);
+				Triangle t1(p1, p2, p3);
+				AllTris.push_back(t1);
 
-			box b2{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
-			rtree.insert(std::make_pair(b2, (unsigned)(AllTris.size() - 1)));
+				box b1{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
+				rtree.insert(std::make_pair(b1, (unsigned)(AllTris.size() - 1)));
+
+				Point p4(x, 0.0f, z);
+				Point p5(x, 0.0f, z + 5.0f);
+				Point p6(x + 5.0f, 0.0f, z + 5.0f);
+				Triangle t2(p4, p5, p6);
+				AllTris.push_back(t2);
+
+				box b2{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
+				rtree.insert(std::make_pair(b2, (unsigned)(AllTris.size() - 1)));
+			}
 		}
 	}
 
@@ -229,6 +235,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	float azimuth = 0.0f;
 	float elevation = 0.0f;
 	float px = 0.0f;
+	float py = 6.0f;
 	float pz = 0.0f;
 
 	FILE* log = NULL;
@@ -350,9 +357,29 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			}
 		}
 
-		// find 5 nearest values to a point
+		box person{ 
+			{ -1.0f * (px + 2.0f) , py - 7.0f, -1.0f * (pz + 2.0f) },
+			{ -1.0f * (px - 2.0f),         py, -1.0f * (pz - 2.0f) }
+		};
 		std::vector<value> result_n;
-		rtree.query(boost::geometry::index::nearest(point(px, 0.0f, pz), 1), std::back_inserter(result_n));
+		rtree.query(boost::geometry::index::intersects(person), std::back_inserter(result_n));
+		size_t u1 = result_n.size();
+
+		int ict = 0;
+		int isect = 0;
+		Point origin(-px, py, -pz);
+		fprintf(log, "%.1f, %.1f, %.1f\n", -px, py, -pz);
+		Point ray(0.0f, -1.0f, 0.0f);
+		Point pout;
+		for (std::vector<value>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter) 
+		{	
+			Triangle tri = AllTris.at(iter->second);
+			isect = RayIntersectsTriangle(origin, ray, tri, pout);
+			fprintf(log, "%.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f :: %i\n",
+				tri.p1.x, tri.p1.y, tri.p1.z,
+				tri.p2.x, tri.p2.y, tri.p2.z,
+				tri.p3.x, tri.p3.y, tri.p3.z, isect);
+		}
 
 		// find some triangles
 		// see if any are below our point
@@ -361,9 +388,10 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		RenderScene(rect.right, rect.bottom, 
 			fps, 
 			azimuth, elevation, 
-			px, pz, 
+			px, py, pz, 
 			ex, ez, 
-			AllTris);
+			AllTris,
+			(int)u1, ict);
 
 		SwapBuffers(hdc);
 	}
