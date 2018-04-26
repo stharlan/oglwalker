@@ -63,3 +63,14 @@ Point Point::operator*(float t)
 {
 	return Point(x * t, y * t, z * t);
 }
+
+float Point::Length()
+{
+	return sqrtf((x * x) + (y * y) + (z * z));
+}
+
+Point Point::MakeUnit()
+{
+	float l = this->Length();
+	return Point(x / l, y / l, z / l);
+}

@@ -30,6 +30,7 @@ RENDER_THREAD_CONTEXT g_ctx;
 
 typedef boost::geometry::model::point<float, 3, boost::geometry::cs::cartesian> point;
 typedef boost::geometry::model::box<point> box;
+typedef boost::geometry::model::segment<point> segment;
 typedef std::pair<box, unsigned> value;
 
 // Forward declarations of functions included in this code module:
@@ -67,6 +68,7 @@ void SetupRC()
 	glEnable(GL_POLYGON_SMOOTH);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_CW);
+	glPointSize(20.0f);
 }
 
 void SetPerspective(int w, int h)
@@ -91,7 +93,8 @@ void SetOrtho(int w, int h)
 
 void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 	float px, float py, float pz, float ex, float ez, std::vector<Triangle> &AllTris,
-	int u1, int u2)
+	int u1, int u2, unsigned int u3,
+	int u4, Point& lpt)
 //void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -121,11 +124,35 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glPolygonMode(GL_FRONT, GL_LINE);
 		glBegin(GL_TRIANGLES);
-		glLineWidth(1.0f);
-		for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
-			iter->Draw();
+		{
+			glLineWidth(1.0f);
+			for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+				iter->Draw();
+		}
 		glEnd();
 
+		// draw some red triangles
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glPolygonMode(GL_FRONT, GL_FILL);
+		glBegin(GL_TRIANGLES);
+		{
+			unsigned int ctr = 0;
+			for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+			{
+				if (ctr == u3) iter->Draw();
+				ctr++;
+			}
+		}
+		glEnd();
+		glBegin(GL_POINTS);
+		glVertex3f(lpt.x, lpt.y, lpt.z);
+		glEnd();
+
+		// set back to white lines
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glPolygonMode(GL_FRONT, GL_LINE);
+
+		// draw a sphere
 		glPushMatrix();
 		{
 			glTranslatef(-10.0f, 10.0f, -10.0f);
@@ -143,10 +170,12 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 	glColor3f(0.0f, 1.0f, 0.0f);
 	glLineWidth(1.0f);
 	glBegin(GL_LINES);
-	glVertex2i((w / 2) - 10, h / 2);
-	glVertex2i((w / 2) + 10, h / 2);
-	glVertex2i(w / 2, (h / 2) - 10);
-	glVertex2i(w / 2, (h / 2) + 10);
+	{
+		glVertex2i((w / 2) - 10, h / 2);
+		glVertex2i((w / 2) + 10, h / 2);
+		glVertex2i(w / 2, (h / 2) - 10);
+		glVertex2i(w / 2, (h / 2) + 10);
+	}
 	glEnd();
 
 	// draw some text on the screen
@@ -164,7 +193,7 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 	FontPrintf(pFont, 1, "%.0f degrees", azimuth);
 
 	glRasterPos2i((w / 2) + 10, (h / 2) + 24);
-	FontPrintf(pFont, 1, "%.4f, %.4f, pct %i, ict %i", ex, ez, u1, u2);
+	FontPrintf(pFont, 1, "%.4f, %.4f, pct %i, ict %i :: %i", ex, ez, u1, u2, u4);
 
 	glFinish();
 
@@ -177,7 +206,7 @@ void AddCubeTris(CubeObject& c1,
 	for (std::vector<Triangle>::iterator iter = c1.tris.begin(); iter != c1.tris.end(); ++iter)
 	{
 		AllTris.push_back(*iter);
-		box b{
+		box b {
 			{ iter->MinX(), iter->MinY(), iter->MinZ() },
 			{ iter->MaxX(), iter->MaxY(), iter->MaxZ() }
 		};
@@ -375,29 +404,46 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 		int ict = 0;
 		int isect = 0;
+		// origin is at foot level
 		Point origin(-px, py, -pz);
 		fprintf(log, "%.1f, %.1f, %.1f\n", -px, py, -pz);
 		Point ray(0.0f, -1.0f, 0.0f);
 		Point pout;
 		float elevAddr = 0.0f;
+		unsigned int theTriIndex = UINT_MAX;
 		for (std::vector<value>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter) 
 		{	
 			Triangle tri = AllTris.at(iter->second);
 			isect = RayIntersectsTriangle(origin, ray, tri, pout);
-			if (isect == 1) elevAddr = pout.y;
+			if (isect == 1) {
+				elevAddr = pout.y;
+				theTriIndex = iter->second;
+			}
 			ict += isect;
-			fprintf(log, "[%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f] :: %i [%.1f %.1f %.1f]\n",
-				origin.x, origin.y, origin.z,
-				ray.x, ray.y, ray.z,
-				tri.p1.x, tri.p1.y, tri.p1.z,
-				tri.p2.x, tri.p2.y, tri.p2.z,
-				tri.p3.x, tri.p3.y, tri.p3.z, isect, pout.x, pout.y, pout.z);
+			//fprintf(log, "[%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f] :: %i [%.1f %.1f %.1f]\n",
+				//origin.x, origin.y, origin.z,
+				//ray.x, ray.y, ray.z,
+				//tri.p1.x, tri.p1.y, tri.p1.z,
+				//tri.p2.x, tri.p2.y, tri.p2.z,
+				//tri.p3.x, tri.p3.y, tri.p3.z, isect, pout.x, pout.y, pout.z);
 
 		}
 
-		// find some triangles
-		// see if any are below our point
-		// with ray intersects triangle
+		// raise origin to eye level
+		fprintf(log, "a/e %.1f, %.1f\n", azimuth, elevation);
+		ray.x = cosf(DEG2RAD(elevation)) * -sinf(DEG2RAD(azimuth));
+		ray.y = sinf(DEG2RAD(elevation));
+		ray.z = cosf(DEG2RAD(elevation)) * cosf(DEG2RAD(azimuth));
+		fprintf(log, "ray3 %.1f, %.1f, %.1f\n", ray.x, ray.y, ray.z);
+		Point unitray = ray.MakeUnit();
+		Point unitraylen = ray * 20.0f;
+		Point farpt = origin - unitraylen;
+		segment los{ {origin.x, origin.y, origin.z},{farpt.x, farpt.y, farpt.z} };
+		fprintf(log, "org %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
+		fprintf(log, "far %.1f, %.1f, %.1f\n", farpt.x, farpt.y, farpt.z);
+		std::vector<value> result_los;
+		rtree.query(boost::geometry::index::intersects(los), std::back_inserter(result_los));
+		size_t u4 = result_los.size();
 
 		RenderScene(rect.right, rect.bottom, 
 			fps, 
@@ -405,7 +451,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			px, py + elevAddr, pz, 
 			ex, ez, 
 			AllTris,
-			(int)u1, ict);
+			(int)u1, ict, theTriIndex, u4, farpt);
 
 		SwapBuffers(hdc);
 	}

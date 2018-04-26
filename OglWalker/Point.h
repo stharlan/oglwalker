@@ -13,6 +13,8 @@ public:
 	Point operator+(Point& p);
 	Point operator-(Point& p);
 	Point operator*(float t);
+	Point MakeUnit();
+	float Length();
 
 	float x;
 	float y;
