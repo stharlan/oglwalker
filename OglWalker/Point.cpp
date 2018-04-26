@@ -35,7 +35,7 @@ void Point::Set(float px, float py, float pz)
 	this->z = pz;
 }
 
-Point& Point::crossProduct(Point& v)
+Point Point::crossProduct(Point& v)
 {
 	return Point(
 		(this->y * v.z) - (this->z * v.y),
@@ -47,4 +47,19 @@ Point& Point::crossProduct(Point& v)
 float Point::dotProduct(Point& v)
 {
 	return ((this->x * v.x) + (this->y * v.y) + (this->z * v.z));
+}
+
+Point Point::operator+(Point& p)
+{
+	return Point(x + p.x, y + p.y, z + p.z);
+}
+
+Point Point::operator-(Point& p)
+{
+	return Point(x - p.x, y - p.y, z - p.z);
+}
+
+Point Point::operator*(float t)
+{
+	return Point(x * t, y * t, z * t);
 }

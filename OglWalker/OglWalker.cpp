@@ -155,6 +155,11 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 	glRasterPos2i(4, 18);
 	FontPrintf(pFont, 1, "hello world %i", (int)fps);
 
+	SYSTEMTIME stime;
+	GetSystemTime(&stime);
+	glRasterPos2i(4, 36);
+	FontPrintf(pFont, 1, "%02i:%02i:%02i\n", stime.wHour, stime.wMinute, stime.wSecond);
+
 	glRasterPos2i((w / 2) + 10, (h / 2) + 10);
 	FontPrintf(pFont, 1, "%.0f degrees", azimuth);
 
