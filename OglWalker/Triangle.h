@@ -15,6 +15,8 @@ public:
 	float MaxY() { return max(max(p1.y, p2.y), p3.y); }
 	float MinZ() { return min(min(p1.z, p2.z), p3.z); }
 	float MaxZ() { return max(max(p1.z, p2.z), p3.z); }
+	Point& MinBox();
+	Point& MaxBox();
 
 	Point p1;
 	Point p2;

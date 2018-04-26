@@ -39,7 +39,7 @@ Point& Point::crossProduct(Point& v)
 {
 	return Point(
 		(this->y * v.z) - (this->z * v.y),
-		(this->x * v.z) - (this->z * v.x),
+		-1.0f * ((this->x * v.z) - (this->z * v.x)),
 		(this->x * v.y) - (this->y * v.x)
 	);
 }

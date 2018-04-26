@@ -206,27 +206,30 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
 		for (float z = -50.0f; z < 50.0f; z += 5.0f) {
 
-			if (x > 30 && z > 30) {
-			} else {
+			float height = 0;
 
-				Point p1(x, 0.0f, z);
-				Point p2(x + 5.0f, 0.0f, z + 5.0f);
-				Point p3(x + 5.0f, 0.0f, z);
-				Triangle t1(p1, p2, p3);
-				AllTris.push_back(t1);
+			Point p1(x, height, z);
+			Point p2(x + 5.0f, height, z + 5.0f);
+			Point p3(x + 5.0f, height, z);
+			Triangle t1(p1, p2, p3);
+			Point p1min = t1.MinBox();
+			Point p1max = t1.MaxBox();
+			AllTris.push_back(t1);
 
-				box b1{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
-				rtree.insert(std::make_pair(b1, (unsigned)(AllTris.size() - 1)));
+			box b1{ {p1min.x, p1min.y, p1min.z},{p1max.x, p1max.y, p1max.z} };
+			rtree.insert(std::make_pair(b1, (unsigned)(AllTris.size() - 1)));
 
-				Point p4(x, 0.0f, z);
-				Point p5(x, 0.0f, z + 5.0f);
-				Point p6(x + 5.0f, 0.0f, z + 5.0f);
-				Triangle t2(p4, p5, p6);
-				AllTris.push_back(t2);
+			Point p4(x, height, z);
+			Point p5(x, height, z + 5.0f);
+			Point p6(x + 5.0f, height, z + 5.0f);
+			Triangle t2(p4, p5, p6);
+			Point p2min = t1.MinBox();
+			Point p2max = t1.MaxBox();
+			AllTris.push_back(t2);
 
-				box b2{ { x, 0.0f, z },{ x + 5.0f, 0.0f, z + 5.0f } };
-				rtree.insert(std::make_pair(b2, (unsigned)(AllTris.size() - 1)));
-			}
+			box b2{ { p2min.x, p2min.y, p2min.z },{ p2max.x, p2max.y, p2max.z } };
+			rtree.insert(std::make_pair(b2, (unsigned)(AllTris.size() - 1)));
+
 		}
 	}
 
@@ -371,14 +374,20 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		fprintf(log, "%.1f, %.1f, %.1f\n", -px, py, -pz);
 		Point ray(0.0f, -1.0f, 0.0f);
 		Point pout;
+		float elevAddr = 0.0f;
 		for (std::vector<value>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter) 
 		{	
 			Triangle tri = AllTris.at(iter->second);
 			isect = RayIntersectsTriangle(origin, ray, tri, pout);
-			fprintf(log, "%.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f :: %i\n",
+			if (isect == 1) elevAddr = pout.y;
+			ict += isect;
+			fprintf(log, "[%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f] :: %i [%.1f %.1f %.1f]\n",
+				origin.x, origin.y, origin.z,
+				ray.x, ray.y, ray.z,
 				tri.p1.x, tri.p1.y, tri.p1.z,
 				tri.p2.x, tri.p2.y, tri.p2.z,
-				tri.p3.x, tri.p3.y, tri.p3.z, isect);
+				tri.p3.x, tri.p3.y, tri.p3.z, isect, pout.x, pout.y, pout.z);
+
 		}
 
 		// find some triangles
@@ -388,7 +397,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		RenderScene(rect.right, rect.bottom, 
 			fps, 
 			azimuth, elevation, 
-			px, py, pz, 
+			px, py + elevAddr, pz, 
 			ex, ez, 
 			AllTris,
 			(int)u1, ict);
@@ -414,6 +423,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
 
 	fopen_s(&g_log, "c:\\temp\\ow.log", "w");
+
+	//Point origin(0, 0, 0);
+	//Point ray(0, -1, 0);
+	//Triangle t(Point(0, -2, 1), Point(1, -2, -1), Point(-1, -2, -1));
+	//Point result;
+	//bool b = RayIntersectsTriangle(origin, ray, t, result);
+	//fprintf(g_log, "%i %.1f %.1f %.1f\n", b, result.x, result.y, result.z);
 
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
