@@ -94,7 +94,7 @@ void SetOrtho(int w, int h)
 void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 	float px, float py, float pz, float ex, float ez, std::vector<Triangle> &AllTris,
 	int u1, int u2, unsigned int u3,
-	int u4, Point& lpt)
+	int u4, Point& lpt, unsigned int u5)
 //void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -139,7 +139,7 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 			unsigned int ctr = 0;
 			for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
 			{
-				if (ctr == u3) iter->Draw();
+				if (ctr == u3 || ctr == u5) iter->Draw();
 				ctr++;
 			}
 		}
@@ -434,16 +434,36 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		ray.x = cosf(DEG2RAD(elevation)) * -sinf(DEG2RAD(azimuth));
 		ray.y = sinf(DEG2RAD(elevation));
 		ray.z = cosf(DEG2RAD(elevation)) * cosf(DEG2RAD(azimuth));
-		fprintf(log, "ray3 %.1f, %.1f, %.1f\n", ray.x, ray.y, ray.z);
 		Point unitray = ray.MakeUnit();
-		Point unitraylen = ray * 20.0f;
+		Point unitraylen = ray * 100.0f;
 		Point farpt = origin - unitraylen;
 		segment los{ {origin.x, origin.y, origin.z},{farpt.x, farpt.y, farpt.z} };
-		fprintf(log, "org %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
-		fprintf(log, "far %.1f, %.1f, %.1f\n", farpt.x, farpt.y, farpt.z);
 		std::vector<value> result_los;
 		rtree.query(boost::geometry::index::intersects(los), std::back_inserter(result_los));
 		size_t u4 = result_los.size();
+		fprintf(log, "far %.1f, %.1f, %.1f\n", farpt.x, farpt.y, farpt.z);
+		fprintf(log, "org %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
+		Point oppRay = ray * -1.0;
+		fprintf(log, "oppray %.1f, %.1f, %.1f\n", oppRay.x, oppRay.y, oppRay.z);
+		unsigned int u5 = UINT_MAX;
+		float mindist = FLT_MAX;
+		for (std::vector<value>::iterator iter = result_los.begin(); iter != result_los.end(); ++iter)
+		{
+			Triangle tri = AllTris.at(iter->second);
+			bool b = RayIntersectsTriangle(origin, oppRay, tri, pout);
+			fprintf(log, "%.1f, %.1f, %.1f :: %.1f, %.1f, %.1f :: %.1f, %.1f, %.1f\n",
+				tri.p1.x, tri.p1.y, tri.p1.z,
+				tri.p2.x, tri.p2.y, tri.p2.z,
+				tri.p3.x, tri.p3.y, tri.p3.z);
+			fprintf(log, "result = %i\n", b);
+			if (b) {
+				float dist = origin.Distance(pout);
+				if (dist < mindist) {
+					mindist = dist;
+					u5 = iter->second;
+				}
+			}
+		}
 
 		RenderScene(rect.right, rect.bottom, 
 			fps, 
@@ -451,7 +471,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			px, py + elevAddr, pz, 
 			ex, ez, 
 			AllTris,
-			(int)u1, ict, theTriIndex, u4, farpt);
+			(int)u1, ict, theTriIndex, u4, farpt, u5);
 
 		SwapBuffers(hdc);
 	}

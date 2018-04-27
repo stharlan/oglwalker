@@ -74,3 +74,12 @@ Point Point::MakeUnit()
 	float l = this->Length();
 	return Point(x / l, y / l, z / l);
 }
+
+float Point::Distance(Point& p)
+{
+	return sqrt(
+		((p.x - x) * (p.x - x)) +
+		((p.y - y) * (p.y - y)) +
+		((p.z - z) * (p.z - z))
+	);
+}

@@ -15,6 +15,7 @@ public:
 	Point operator*(float t);
 	Point MakeUnit();
 	float Length();
+	float Distance(Point& p);
 
 	float x;
 	float y;
