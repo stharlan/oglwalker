@@ -8,6 +8,7 @@
 #define PI 3.14159f
 #define DEG2RAD(x) (x * PI / 180.0f)
 #define CUSTOM_QUIT (WM_USER + 1)
+#define NO_TRIANGLE_FOUND UINT_MAX
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -241,7 +242,7 @@ unsigned int FindClosestTriThatIntersectsLine(
 	std::vector<value> result_n;
 	spidx.query(boost::geometry::index::intersects(line), std::back_inserter(result_n));
 
-	unsigned int indexOfClosestTri = UINT_MAX;
+	unsigned int indexOfClosestTri = NO_TRIANGLE_FOUND;
 	float mindist = FLT_MAX;
 	Point pout;
 
@@ -262,6 +263,15 @@ unsigned int FindClosestTriThatIntersectsLine(
 	return indexOfClosestTri;
 }
 
+void ProcessFloor(Point& p) {
+	if (p.x >= 30.0f && p.z <= -30.0f) {
+		p.y = 5.0f;
+	}
+	else if (p.x <= -30.0f && p.z >= 30.0f) {
+		p.y = -5.0f;
+	}
+}
+
 DWORD WINAPI RenderingThreadEntryPoint(void* pVoid) 
 {
 	RENDER_THREAD_CONTEXT* ctx = (RENDER_THREAD_CONTEXT*)pVoid;
@@ -271,6 +281,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 	std::vector<Triangle> AllTris;
 
+	// add a floor
 	unsigned int ctr = 0;
 	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
 		for (float z = -50.0f; z < 50.0f; z += 5.0f) {
@@ -280,6 +291,9 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			Point p1(x, height, z);
 			Point p2(x + 5.0f, height, z + 5.0f);
 			Point p3(x + 5.0f, height, z);
+			ProcessFloor(p1);
+			ProcessFloor(p2);
+			ProcessFloor(p3);
 			Triangle t1(p1, p2, p3);
 			Point p1min = t1.MinBox();
 			Point p1max = t1.MaxBox();
@@ -291,6 +305,9 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			Point p4(x, height, z);
 			Point p5(x, height, z + 5.0f);
 			Point p6(x + 5.0f, height, z + 5.0f);
+			ProcessFloor(p4);
+			ProcessFloor(p5);
+			ProcessFloor(p6);
 			Triangle t2(p4, p5, p6);
 			Point p2min = t1.MinBox();
 			Point p2max = t1.MaxBox();
@@ -339,6 +356,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	GLfloat ex = 0.0f;
 	GLfloat ez = 0.0f;
 	float moveDir = 0.0f, erad = 0.0f;
+	float elevationAddr = 0.0f;
 
 	// main loop
 	fprintf(log, "start loop\n");
@@ -353,6 +371,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		// get a count and calculate fps
 		QueryPerformanceCounter(&perfCount);
 		float fps = (float)perfFreq.QuadPart / (float)(perfCount.QuadPart - lastCount);
+		float walkDist = 25.0f / fps;
 		lastCount = perfCount.QuadPart;
 
 		// process direct input
@@ -433,19 +452,19 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 					ex = sinf(erad);
 					ez = cosf(erad);
 				}
-				pz += 0.01f * ez;
-				px -= 0.01f * ex;
+				pz += walkDist * ez;
+				px -= walkDist * ex;
 			}
 		}
 
 		// find the triangle directly underneath the camera
-		Point origin(-px, py, -pz);
+		Point origin(-px, py + elevationAddr, -pz);
 		Point ray(0.0f, -1.0f, 0.0f);
 		Point unitraylen = ray * 100.0f;
 		Point farpt = origin + unitraylen;
 		segment los{ { origin.x, origin.y, origin.z },{ farpt.x, farpt.y, farpt.z } };
-		Point pout;
-		unsigned int triangleBelow = FindClosestTriThatIntersectsLine(rtree, los, AllTris, origin, ray, pout);
+		Point elevationPoint;
+		unsigned int triangleBelow = FindClosestTriThatIntersectsLine(rtree, los, AllTris, origin, ray, elevationPoint);
 
 		// find the triangle that is being "looked at"
 		// origin doesn't change
@@ -457,9 +476,12 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		Point oppRay = ray * -1.0;
 		farpt = origin - unitraylen;
 		segment los2{ { origin.x, origin.y, origin.z },{ farpt.x, farpt.y, farpt.z } };
+		Point pout;
 		unsigned int triangleLookingAt = FindClosestTriThatIntersectsLine(rtree, los2, AllTris, origin, oppRay, pout);
 
-		float elevAddr = 0.0f;
+		if (triangleBelow != NO_TRIANGLE_FOUND) {
+			elevationAddr = elevationPoint.y;
+		}
 
 		// RENDER SCENE BEGIN
 
@@ -486,7 +508,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			glRotatef(elevation, eex, 0.0f, eez);
 
 			// position x/y
-			glTranslatef(px, -1.0f * py, pz);
+			glTranslatef(px, -1.0f * (py + elevationAddr), pz);
 
 			// draw the grid (white)
 			glColor3f(1.0f, 1.0f, 1.0f);
