@@ -44,7 +44,7 @@ void Triangle::Draw()
 	glVertex3f(this->p3.x, this->p3.y, this->p3.z);
 }
 
-Point& Triangle::MinBox()
+Point Triangle::MinBox()
 {
 	return Point(
 		min(min(p1.x, p2.x), p3.x),
@@ -52,7 +52,7 @@ Point& Triangle::MinBox()
 		min(min(p1.z, p2.z), p3.z));
 }
 
-Point& Triangle::MaxBox()
+Point Triangle::MaxBox()
 {
 	return Point(
 		max(max(p1.x, p2.x), p3.x),
