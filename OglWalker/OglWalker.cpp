@@ -91,10 +91,11 @@ void SetOrtho(int w, int h)
 	glMatrixMode(GL_MODELVIEW);
 }
 
+/*
 void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 	float px, float py, float pz, float ex, float ez, std::vector<Triangle> &AllTris,
-	int u1, int u2, unsigned int u3,
-	int u4, Point& lpt, unsigned int u5)
+	int u1, unsigned int u3,
+	Point& lpt, unsigned int u5)
 //void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -193,11 +194,12 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 	FontPrintf(pFont, 1, "%.0f degrees", azimuth);
 
 	glRasterPos2i((w / 2) + 10, (h / 2) + 24);
-	FontPrintf(pFont, 1, "%.4f, %.4f, pct %i, ict %i :: %i", ex, ez, u1, u2, u4);
+	FontPrintf(pFont, 1, "%.4f, %.4f, pct %i", ex, ez, u1);
 
 	glFinish();
 
 }
+*/
 
 void AddCubeTris(CubeObject& c1,
 	std::vector<Triangle>& AllTris,
@@ -225,6 +227,39 @@ void AddSomeStuff(std::vector<Triangle>& AllTris,
 
 	CubeObject c3(10, 10, 10, 10, 1, 11);
 	AddCubeTris(c3, AllTris, rtree);
+}
+
+unsigned int FindClosestTriThatIntersectsLine(
+	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> >& spidx,
+	segment& line, 
+	std::vector<Triangle>& tris,
+	Point& origin,
+	Point& ray,
+	Point& intersectionPoint)
+{
+	// do the query
+	std::vector<value> result_n;
+	spidx.query(boost::geometry::index::intersects(line), std::back_inserter(result_n));
+
+	unsigned int indexOfClosestTri = UINT_MAX;
+	float mindist = FLT_MAX;
+	Point pout;
+
+	for (std::vector<value>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter)
+	{
+		Triangle tri = tris.at(iter->second);
+		bool b = RayIntersectsTriangle(origin, ray, tri, pout);
+		if (b) {
+			float dist = origin.Distance(pout);
+			if (dist < mindist) {
+				mindist = dist;
+				indexOfClosestTri = iter->second;
+				intersectionPoint = pout;
+			}
+		}
+	}
+
+	return indexOfClosestTri;
 }
 
 DWORD WINAPI RenderingThreadEntryPoint(void* pVoid) 
@@ -305,20 +340,25 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	GLfloat ez = 0.0f;
 	float moveDir = 0.0f, erad = 0.0f;
 
+	// main loop
 	fprintf(log, "start loop\n");
 	while (1) {
+
 		// check state
 		if (WaitForSingleObject(ctx->hQuitEvent, 0) == WAIT_OBJECT_0) {
 			fprintf(log, "quit event is triggered\n");
 			break;
 		}
 
+		// get a count and calculate fps
 		QueryPerformanceCounter(&perfCount);
-
 		float fps = (float)perfFreq.QuadPart / (float)(perfCount.QuadPart - lastCount);
 		lastCount = perfCount.QuadPart;
 
+		// process direct input
 		if (TRUE == ctx->useDI) {
+
+			// mouse movement - look at and turning
 			if (TRUE == ReadMouseState(&mouseState))
 			{
 				//fprintf(log, "mouse %i, %i, %i\n", mouseState.lX, mouseState.lY, mouseState.lZ);
@@ -331,8 +371,10 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 				if (elevation > 90.0f) elevation = 90.0f;
 			}
 
+			// keyboard movement - move camera
 			if (TRUE == ReadKeyboardState(&keystate[0]))
 			{
+				// quit
 				fprintf(log, "esc = %i\n", keystate[DIK_ESCAPE]);
 				if (keystate[DIK_ESCAPE] == (unsigned char)128) {
 					PostMessage(ctx->hWnd, CUSTOM_QUIT, 0, 0);
@@ -340,6 +382,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 				ex = ez = 0.0f;
 				
+				// using standard wsad for movement
+				// fwd bck strafe left and strafe right
 				if (keystate[DIK_W] == (unsigned char)128) {
 					if (keystate[DIK_A] == (unsigned char)128) {
 						moveDir = azimuth - 45.0f;
@@ -394,85 +438,137 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			}
 		}
 
-		box person{ 
-			{ -1.0f * (px + 2.0f) , py - 7.0f, -1.0f * (pz + 2.0f) },
-			{ -1.0f * (px - 2.0f),         py, -1.0f * (pz - 2.0f) }
-		};
-		std::vector<value> result_n;
-		rtree.query(boost::geometry::index::intersects(person), std::back_inserter(result_n));
-		size_t u1 = result_n.size();
-
-		int ict = 0;
-		int isect = 0;
-		// origin is at foot level
+		// find the triangle directly underneath the camera
 		Point origin(-px, py, -pz);
-		fprintf(log, "%.1f, %.1f, %.1f\n", -px, py, -pz);
 		Point ray(0.0f, -1.0f, 0.0f);
+		Point unitraylen = ray * 100.0f;
+		Point farpt = origin + unitraylen;
+		segment los{ { origin.x, origin.y, origin.z },{ farpt.x, farpt.y, farpt.z } };
 		Point pout;
-		float elevAddr = 0.0f;
-		unsigned int theTriIndex = UINT_MAX;
-		for (std::vector<value>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter) 
-		{	
-			Triangle tri = AllTris.at(iter->second);
-			isect = RayIntersectsTriangle(origin, ray, tri, pout);
-			if (isect == 1) {
-				elevAddr = pout.y;
-				theTriIndex = iter->second;
-			}
-			ict += isect;
-			//fprintf(log, "[%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f], [%.1f %.1f %.1f] :: %i [%.1f %.1f %.1f]\n",
-				//origin.x, origin.y, origin.z,
-				//ray.x, ray.y, ray.z,
-				//tri.p1.x, tri.p1.y, tri.p1.z,
-				//tri.p2.x, tri.p2.y, tri.p2.z,
-				//tri.p3.x, tri.p3.y, tri.p3.z, isect, pout.x, pout.y, pout.z);
+		unsigned int triangleBelow = FindClosestTriThatIntersectsLine(rtree, los, AllTris, origin, ray, pout);
 
-		}
-
-		// raise origin to eye level
-		fprintf(log, "a/e %.1f, %.1f\n", azimuth, elevation);
+		// find the triangle that is being "looked at"
+		// origin doesn't change
 		ray.x = cosf(DEG2RAD(elevation)) * -sinf(DEG2RAD(azimuth));
 		ray.y = sinf(DEG2RAD(elevation));
 		ray.z = cosf(DEG2RAD(elevation)) * cosf(DEG2RAD(azimuth));
 		Point unitray = ray.MakeUnit();
-		Point unitraylen = ray * 100.0f;
-		Point farpt = origin - unitraylen;
-		segment los{ {origin.x, origin.y, origin.z},{farpt.x, farpt.y, farpt.z} };
-		std::vector<value> result_los;
-		rtree.query(boost::geometry::index::intersects(los), std::back_inserter(result_los));
-		size_t u4 = result_los.size();
-		fprintf(log, "far %.1f, %.1f, %.1f\n", farpt.x, farpt.y, farpt.z);
-		fprintf(log, "org %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
+		unitraylen = ray * 100.0f;
 		Point oppRay = ray * -1.0;
-		fprintf(log, "oppray %.1f, %.1f, %.1f\n", oppRay.x, oppRay.y, oppRay.z);
-		unsigned int u5 = UINT_MAX;
-		float mindist = FLT_MAX;
-		for (std::vector<value>::iterator iter = result_los.begin(); iter != result_los.end(); ++iter)
+		farpt = origin - unitraylen;
+		segment los2{ { origin.x, origin.y, origin.z },{ farpt.x, farpt.y, farpt.z } };
+		unsigned int triangleLookingAt = FindClosestTriThatIntersectsLine(rtree, los2, AllTris, origin, oppRay, pout);
+
+		float elevAddr = 0.0f;
+
+		// RENDER SCENE BEGIN
+
+		// clear stuff
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// set a perspective matrix
+		SetPerspective(rect.right, rect.bottom);
+
+		// create a grid of triangles as a "floor"
+		glPushMatrix();
 		{
-			Triangle tri = AllTris.at(iter->second);
-			bool b = RayIntersectsTriangle(origin, oppRay, tri, pout);
-			fprintf(log, "%.1f, %.1f, %.1f :: %.1f, %.1f, %.1f :: %.1f, %.1f, %.1f\n",
-				tri.p1.x, tri.p1.y, tri.p1.z,
-				tri.p2.x, tri.p2.y, tri.p2.z,
-				tri.p3.x, tri.p3.y, tri.p3.z);
-			fprintf(log, "result = %i\n", b);
-			if (b) {
-				float dist = origin.Distance(pout);
-				if (dist < mindist) {
-					mindist = dist;
-					u5 = iter->second;
+			glLoadIdentity();
+
+			// direction look l/r
+			glRotatef(azimuth, 0.0f, 1.0f, 0.0);
+
+			float erad = DEG2RAD(azimuth);
+			GLfloat eex = cosf(erad);
+			GLfloat eez = sinf(erad);
+
+			// elevation look u/d
+			glRotatef(elevation, eex, 0.0f, eez);
+
+			// position x/y
+			glTranslatef(px, -1.0f * py, pz);
+
+			// draw the grid (white)
+			glColor3f(1.0f, 1.0f, 1.0f);
+			glPolygonMode(GL_FRONT, GL_LINE);
+			glBegin(GL_TRIANGLES);
+			{
+				glLineWidth(1.0f);
+				for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+					iter->Draw();
+			}
+			glEnd();
+
+			// draw some red triangles
+			glColor3f(1.0f, 0.0f, 0.0f);
+			glPolygonMode(GL_FRONT, GL_FILL);
+			glBegin(GL_TRIANGLES);
+			{
+				unsigned int ctr = 0;
+				for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+				{
+					if (ctr == triangleBelow || ctr == triangleLookingAt) iter->Draw();
+					ctr++;
 				}
 			}
+			glEnd();
+			glBegin(GL_POINTS);
+			glVertex3f(farpt.x, farpt.y, farpt.z);
+			glEnd();
+
+			// set back to white lines
+			glColor3f(1.0f, 1.0f, 1.0f);
+			glPolygonMode(GL_FRONT, GL_LINE);
+
+			// draw a sphere
+			glPushMatrix();
+			{
+				glTranslatef(-10.0f, 10.0f, -10.0f);
+				GLUquadric* pquad = gluNewQuadric();
+				gluSphere(pquad, 5, 10, 10);
+				gluDeleteQuadric(pquad);
+			}
+			glPopMatrix();
+
 		}
+		glPopMatrix();
 
-		RenderScene(rect.right, rect.bottom, 
-			fps, 
-			azimuth, elevation, 
-			px, py + elevAddr, pz, 
-			ex, ez, 
-			AllTris,
-			(int)u1, ict, theTriIndex, u4, farpt, u5);
+		// create a "crosshair" in the middle of the screen
+		SetOrtho(rect.right, rect.bottom);
+		glColor3f(0.0f, 1.0f, 0.0f);
+		glLineWidth(1.0f);
+		glBegin(GL_LINES);
+		{
+			glVertex2i((rect.right / 2) - 10, rect.bottom / 2);
+			glVertex2i((rect.right / 2) + 10, rect.bottom / 2);
+			glVertex2i(rect.right / 2, (rect.bottom / 2) - 10);
+			glVertex2i(rect.right / 2, (rect.bottom / 2) + 10);
+		}
+		glEnd();
 
+		// draw some text on the screen
+		// debugging messages - for now
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glRasterPos2i(4, 18);
+		FontPrintf(pFont, 1, "hello world %i", (int)fps);
+
+		SYSTEMTIME stime;
+		GetSystemTime(&stime);
+		glRasterPos2i(4, 36);
+		FontPrintf(pFont, 1, "%02i:%02i:%02i\n", stime.wHour, stime.wMinute, stime.wSecond);
+
+		glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 10);
+		FontPrintf(pFont, 1, "%.0f degrees", azimuth);
+
+		glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 24);
+		FontPrintf(pFont, 1, "%.4f, %.4f", ex, ez);
+
+		// finish it all
+		glFinish();
+
+		// RENDER SCENE END
+
+		// present to screen
 		SwapBuffers(hdc);
 	}
 
