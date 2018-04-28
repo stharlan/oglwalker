@@ -236,8 +236,11 @@ unsigned int FindClosestTriThatIntersectsLine(
 	std::vector<Triangle>& tris,
 	Point& origin,
 	Point& ray,
-	Point& intersectionPoint)
+	Point& intersectionPoint,
+	FILE* log)
 {
+	if (log != NULL) fprintf(log, "<= FindClosestTriThatIntersectsLine =>\n");
+
 	// do the query
 	std::vector<value> result_n;
 	spidx.query(boost::geometry::index::intersects(line), std::back_inserter(result_n));
@@ -246,15 +249,40 @@ unsigned int FindClosestTriThatIntersectsLine(
 	float mindist = FLT_MAX;
 	Point pout;
 
+	if (log != NULL) {
+		fprintf(log, "origin %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
+		fprintf(log, "ray %.1f, %.1f, %.1f\n", ray.x, ray.y, ray.z);
+	}
+
 	for (std::vector<value>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter)
 	{
 		Triangle tri = tris.at(iter->second);
+		if (log != NULL) {
+			fprintf(log, "tri index = %i\n", iter->second);
+			fprintf(log, "trip1 %.1f, %.1f, %.1f\n", tri.p1.x, tri.p1.y, tri.p1.z);
+			fprintf(log, "trip2 %.1f, %.1f, %.1f\n", tri.p2.x, tri.p2.y, tri.p2.z);
+			fprintf(log, "trip3 %.1f, %.1f, %.1f\n", tri.p3.x, tri.p3.y, tri.p3.z);
+			fprintf(log, "boxmin %.1f, %.1f, %.1f\n",
+				iter->first.min_corner().get<0>(),
+				iter->first.min_corner().get<1>(),
+				iter->first.min_corner().get<2>());
+			fprintf(log, "boxmax %.1f, %.1f, %.1f\n",
+				iter->first.max_corner().get<0>(),
+				iter->first.max_corner().get<1>(),
+				iter->first.max_corner().get<2>());
+		}
 		bool b = RayIntersectsTriangle(origin, ray, tri, pout);
+		if (log != NULL) {
+			fprintf(log, "result %i - pout %.1f, %.1f, %.1f\n", b, pout.x, pout.y, pout.z);
+		}
 		if (b) {
 			float dist = origin.Distance(pout);
 			if (dist < mindist) {
 				mindist = dist;
 				indexOfClosestTri = iter->second;
+				if (log != NULL) {
+					fprintf(log, "dist = %.1f; mindist = %.1f; index = %i\n", dist, mindist, indexOfClosestTri);
+				}
 				intersectionPoint = pout;
 			}
 		}
@@ -309,8 +337,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			ProcessFloor(p5);
 			ProcessFloor(p6);
 			Triangle t2(p4, p5, p6);
-			Point p2min = t1.MinBox();
-			Point p2max = t1.MaxBox();
+			Point p2min = t2.MinBox();
+			Point p2max = t2.MaxBox();
 			AllTris.push_back(t2);
 
 			box b2{ { p2min.x, p2min.y, p2min.z },{ p2max.x, p2max.y, p2max.z } };
@@ -464,7 +492,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		Point farpt = origin + unitraylen;
 		segment los{ { origin.x, origin.y, origin.z },{ farpt.x, farpt.y, farpt.z } };
 		Point elevationPoint;
-		unsigned int triangleBelow = FindClosestTriThatIntersectsLine(rtree, los, AllTris, origin, ray, elevationPoint);
+		unsigned int triangleBelow = FindClosestTriThatIntersectsLine(
+			rtree, los, AllTris, origin, ray, elevationPoint, NULL);
 
 		// find the triangle that is being "looked at"
 		// origin doesn't change
@@ -477,7 +506,11 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		farpt = origin - unitraylen;
 		segment los2{ { origin.x, origin.y, origin.z },{ farpt.x, farpt.y, farpt.z } };
 		Point pout;
-		unsigned int triangleLookingAt = FindClosestTriThatIntersectsLine(rtree, los2, AllTris, origin, oppRay, pout);
+		//fprintf(log, "origin %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
+		//fprintf(log, "oppRay %.1f, %.1f, %.1f\n", oppRay.x, oppRay.y, oppRay.z);
+		//fprintf(log, "farpt %.1f, %.1f, %.1f\n", farpt.x, farpt.y, farpt.z);
+		unsigned int triangleLookingAt = FindClosestTriThatIntersectsLine(
+			rtree, los2, AllTris, origin, oppRay, pout, log);
 
 		if (triangleBelow != NO_TRIANGLE_FOUND) {
 			elevationAddr = elevationPoint.y;
