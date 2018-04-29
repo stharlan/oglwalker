@@ -217,17 +217,21 @@ void AddCubeTris(CubeObject& c1,
 	}
 }
 
+#define ADDCUBE(a,b,c,d,e,f) AddCubeTris(CubeObject(a,b,c,d,e,f), AllTris, rtree);
+
 void AddSomeStuff(std::vector<Triangle>& AllTris,
 	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> >& rtree)
 {
-	CubeObject c1(10, 0, 10, 10, 10, 1);
-	AddCubeTris(c1, AllTris, rtree);
+	ADDCUBE(-50, -1, -50, 100, 1, 100);
+	ADDCUBE(-50, 0, -50, 20, 1, 20);
+	ADDCUBE(-50, 1, -50, 10, 1, 10);
+	ADDCUBE(-50, 2, -50, 5, 1, 5);
 
-	CubeObject c2(10, 0, 20, 10, 10, 1);
-	AddCubeTris(c2, AllTris, rtree);
+	ADDCUBE(-20, 0, 20, 10, 10, 10);
 
-	CubeObject c3(10, 10, 10, 10, 1, 11);
-	AddCubeTris(c3, AllTris, rtree);
+	ADDCUBE(10, 0, 10, 10, 10, 1);
+	ADDCUBE(10, 0, 20, 10, 10, 1);
+	ADDCUBE(10, 10, 10, 10, 1, 11);
 }
 
 unsigned int FindClosestTriThatIntersectsLine(
@@ -310,7 +314,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	std::vector<Triangle> AllTris;
 
 	// add a floor
-	unsigned int ctr = 0;
+	/*
 	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
 		for (float z = -50.0f; z < 50.0f; z += 5.0f) {
 
@@ -346,6 +350,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 		}
 	}
+	*/
 
 	AddSomeStuff(AllTris, rtree);
 
@@ -556,7 +561,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 			// draw some red triangles
 			glColor3f(1.0f, 0.0f, 0.0f);
-			glPolygonMode(GL_FRONT, GL_FILL);
+			//glPolygonMode(GL_FRONT, GL_FILL);
 			glBegin(GL_TRIANGLES);
 			{
 				unsigned int ctr = 0;
@@ -567,9 +572,10 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 				}
 			}
 			glEnd();
-			glBegin(GL_POINTS);
-			glVertex3f(farpt.x, farpt.y, farpt.z);
-			glEnd();
+
+			//glBegin(GL_POINTS);
+			//glVertex3f(farpt.x, farpt.y, farpt.z);
+			//glEnd();
 
 			// set back to white lines
 			glColor3f(1.0f, 1.0f, 1.0f);
@@ -578,7 +584,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			// draw a sphere
 			glPushMatrix();
 			{
-				glTranslatef(-10.0f, 10.0f, -10.0f);
+				glTranslatef(-100.0f, 100.0f, -100.0f);
 				GLUquadric* pquad = gluNewQuadric();
 				gluSphere(pquad, 5, 10, 10);
 				gluDeleteQuadric(pquad);

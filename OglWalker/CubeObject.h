@@ -17,9 +17,9 @@ private:
 	float x;
 	float y;
 	float z;
-	float w;
-	float h;
-	float t;
+	float dx;
+	float dy;
+	float dz;
 public:
 	std::vector<Triangle> tris;
 };

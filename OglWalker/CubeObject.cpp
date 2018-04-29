@@ -7,9 +7,9 @@ CubeObject::CubeObject()
 	this->x = 10;
 	this->y = 0;
 	this->z = 10;
-	this->w = 10;
-	this->h = 10;
-	this->t = 10;
+	this->dx = 10;
+	this->dy = 10;
+	this->dz = 10;
 	this->BuildTris();
 }
 
@@ -18,9 +18,9 @@ CubeObject::CubeObject(float px, float py, float pz, float pw, float ph, float p
 	this->x = px;
 	this->y = py;
 	this->z = pz;
-	this->w = pw;
-	this->h = ph;
-	this->t = pt;
+	this->dx = pw;
+	this->dy = ph;
+	this->dz = pt;
 	this->BuildTris();
 }
 
@@ -44,18 +44,18 @@ void CubeObject::AddTri(
 void CubeObject::BuildTris()
 {
 	this->tris.clear();
-	AddTri(x, y, z, x + w, y + h, z, x + w, y, z);
-	AddTri(x, y, z,	x, y + h, z, x + w, y + h, z);
-	AddTri(x, y, z + t,	x + w, y, z + t, x + w, y + h, z + t);
-	AddTri(x, y, z + t,	x + w, y + h, z + t, x, y + h, z + t);
-	AddTri(x, y, z,	x, y, z + t, x, y + h, z + t);
-	AddTri(x, y, z,	x, y + h, z + t, x, y + h, z);
-	AddTri(x + w, y, z,	x + w, y + h, z + t, x + w, y, z + t);
-	AddTri(x + w, y, z,	x + w, y + h, z, x + w, y + h, z + t);
-	AddTri(x, y, z,	x + w, y, z, x + w, y, z + t);
-	AddTri(x, y, z,	x + w, y, z + t, x, y, z + t);
-	AddTri(x, y + h, z,	x + w, y + h, z + t, x + w, y + h, z);
-	AddTri(x, y + h, z,	x, y + h, z + t, x + w, y + h, z + t);
+	AddTri(x, y, z, x + dx, y + dy, z, x + dx, y, z);
+	AddTri(x, y, z,	x, y + dy, z, x + dx, y + dy, z);
+	AddTri(x, y, z + dz, x + dx, y, z + dz, x + dx, y + dy, z + dz);
+	AddTri(x, y, z + dz, x + dx, y + dy, z + dz, x, y + dy, z + dz);
+	AddTri(x, y, z,	x, y, z + dz, x, y + dy, z + dz);
+	AddTri(x, y, z,	x, y + dy, z + dz, x, y + dy, z);
+	AddTri(x + dx, y, z, x + dx, y + dy, z + dz, x + dx, y, z + dz);
+	AddTri(x + dx, y, z, x + dx, y + dy, z, x + dx, y + dy, z + dz);
+	AddTri(x, y, z,	x + dx, y, z, x + dx, y, z + dz);
+	AddTri(x, y, z,	x + dx, y, z + dz, x, y, z + dz);
+	AddTri(x, y + dy, z, x + dx, y + dy, z + dz, x + dx, y + dy, z);
+	AddTri(x, y + dy, z, x, y + dy, z + dz, x + dx, y + dy, z + dz);
 }
 
 void CubeObject::Draw()
