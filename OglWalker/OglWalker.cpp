@@ -29,10 +29,10 @@ typedef struct {
 
 RENDER_THREAD_CONTEXT g_ctx;
 
-typedef boost::geometry::model::point<float, 3, boost::geometry::cs::cartesian> point;
-typedef boost::geometry::model::box<point> box;
-typedef boost::geometry::model::segment<point> segment;
-typedef std::pair<box, unsigned> value;
+typedef boost::geometry::model::point<float, 3, boost::geometry::cs::cartesian> GPointModel;
+typedef boost::geometry::model::box<GPointModel> GBoxModel;
+typedef boost::geometry::model::segment<GPointModel> GSegmentModel;
+typedef std::pair<GBoxModel, unsigned> GValueModel;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -204,30 +204,40 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 
 void AddCubeTris(CubeObject& c1,
 	std::vector<Triangle>& AllTris,
-	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> >& rtree)
+	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> >& GSpatialIndex)
 {
 	for (std::vector<Triangle>::iterator iter = c1.tris.begin(); iter != c1.tris.end(); ++iter)
 	{
 		AllTris.push_back(*iter);
-		box b {
+		GBoxModel b {
 			{ iter->MinX(), iter->MinY(), iter->MinZ() },
 			{ iter->MaxX(), iter->MaxY(), iter->MaxZ() }
 		};
-		rtree.insert(std::make_pair(b, (unsigned)(AllTris.size() - 1)));
+		GSpatialIndex.insert(std::make_pair(b, (unsigned)(AllTris.size() - 1)));
 	}
 }
 
-#define ADDCUBE(a,b,c,d,e,f) AddCubeTris(CubeObject(a,b,c,d,e,f), AllTris, rtree);
+#define ADDCUBE(a,b,c,d,e,f) AddCubeTris(CubeObject(a,b,c,d,e,f), AllTris, GSpatialIndex);
 
 void AddSomeStuff(std::vector<Triangle>& AllTris,
-	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> >& rtree)
+	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> >& GSpatialIndex)
 {
+	// floor
 	ADDCUBE(-50, -1, -50, 100, 1, 100);
+
+	// walls
+	ADDCUBE(-51, -1, -51, 101, 11, 1);
+	ADDCUBE(-51, -1, 50, 101, 11, 1);
+	ADDCUBE(50, -1, -51, 1, 11, 102);
+	ADDCUBE(-51, -1, -50, 1, 11, 100);
+
 	ADDCUBE(-50, 0, -50, 20, 1, 20);
 	ADDCUBE(-50, 1, -50, 10, 1, 10);
 	ADDCUBE(-50, 2, -50, 5, 1, 5);
 
-	ADDCUBE(-20, 0, 20, 10, 10, 10);
+	ADDCUBE(-20, 0, 20, 5, 2, 5);
+	ADDCUBE(-25, 0, 20, 5, 3, 5);
+	ADDCUBE(-30, 0, 20, 5, 4, 5);
 
 	ADDCUBE(10, 0, 10, 10, 10, 1);
 	ADDCUBE(10, 0, 20, 10, 10, 1);
@@ -235,8 +245,8 @@ void AddSomeStuff(std::vector<Triangle>& AllTris,
 }
 
 unsigned int FindClosestTriThatIntersectsLine(
-	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> >& spidx,
-	segment& line, 
+	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> >& GSpatialIndex,
+	GSegmentModel& line, 
 	std::vector<Triangle>& tris,
 	Point& origin,
 	Point& ray,
@@ -246,8 +256,8 @@ unsigned int FindClosestTriThatIntersectsLine(
 	if (log != NULL) fprintf(log, "<= FindClosestTriThatIntersectsLine =>\n");
 
 	// do the query
-	std::vector<value> result_n;
-	spidx.query(boost::geometry::index::intersects(line), std::back_inserter(result_n));
+	std::vector<GValueModel> result_n;
+	GSpatialIndex.query(boost::geometry::index::intersects(line), std::back_inserter(result_n));
 
 	unsigned int indexOfClosestTri = NO_TRIANGLE_FOUND;
 	float mindist = FLT_MAX;
@@ -258,7 +268,7 @@ unsigned int FindClosestTriThatIntersectsLine(
 		fprintf(log, "ray %.1f, %.1f, %.1f\n", ray.x, ray.y, ray.z);
 	}
 
-	for (std::vector<value>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter)
+	for (std::vector<GValueModel>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter)
 	{
 		Triangle tri = tris.at(iter->second);
 		if (log != NULL) {
@@ -309,7 +319,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	RENDER_THREAD_CONTEXT* ctx = (RENDER_THREAD_CONTEXT*)pVoid;
 
 	// create the rtree using default constructor
-	boost::geometry::index::rtree< value, boost::geometry::index::quadratic<16> > rtree;
+	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> > GSpatialIndex;
 
 	std::vector<Triangle> AllTris;
 
@@ -352,13 +362,18 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	}
 	*/
 
-	AddSomeStuff(AllTris, rtree);
+	AddSomeStuff(AllTris, GSpatialIndex);
 
-	float azimuth = 0.0f;
-	float elevation = 0.0f;
+	float EyeAzimuthInDegrees = 0.0f;
+	float EyeElevationInDegrees = 0.0f;
 	float px = 0.0f;
-	float py = 6.0f;
+	float _py = 0.0f;
 	float pz = 0.0f;
+	float eyeHeight = 6.0f;
+	float midHeight = 3.0f;
+	float movementInTheX = 0.0f;
+	float movementInTheY = 0.0f;
+	float movementInTheZ = 0.0f;
 
 	FILE* log = NULL;
 	fopen_s(&log, "c:\\temp\\rt.log", "w");
@@ -388,8 +403,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 	GLfloat ex = 0.0f;
 	GLfloat ez = 0.0f;
-	float moveDir = 0.0f, erad = 0.0f;
-	float elevationAddr = 0.0f;
+	float MovementDirectionInDegrees = 0.0f;
 
 	// main loop
 	fprintf(log, "start loop\n");
@@ -403,10 +417,11 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 		// get a count and calculate fps
 		QueryPerformanceCounter(&perfCount);
-		float fps = (float)perfFreq.QuadPart / (float)(perfCount.QuadPart - lastCount);
-		float walkDist = 25.0f / fps;
+		float FramesPerSecond = (float)perfFreq.QuadPart / (float)(perfCount.QuadPart - lastCount);
+		float WalkingStride = 25.0f / FramesPerSecond;
 		lastCount = perfCount.QuadPart;
 
+		// find movement in the x and z directions
 		// process direct input
 		if (TRUE == ctx->useDI) {
 
@@ -414,13 +429,13 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			if (TRUE == ReadMouseState(&mouseState))
 			{
 				//fprintf(log, "mouse %i, %i, %i\n", mouseState.lX, mouseState.lY, mouseState.lZ);
-				azimuth += (mouseState.lX / 8.0f);
-				if (azimuth < 0.0f) azimuth = azimuth + 360.0f;
-				if (azimuth > 360.0f) azimuth = azimuth - 360.0f;
+				EyeAzimuthInDegrees += (mouseState.lX / 8.0f);
+				if (EyeAzimuthInDegrees < 0.0f) EyeAzimuthInDegrees = EyeAzimuthInDegrees + 360.0f;
+				if (EyeAzimuthInDegrees > 360.0f) EyeAzimuthInDegrees = EyeAzimuthInDegrees - 360.0f;
 
-				elevation += (mouseState.lY / 8.0f);
-				if (elevation < -90.0f) elevation = -90.0f;
-				if (elevation > 90.0f) elevation = 90.0f;
+				EyeElevationInDegrees += (mouseState.lY / 8.0f);
+				if (EyeElevationInDegrees < -90.0f) EyeElevationInDegrees = -90.0f;
+				if (EyeElevationInDegrees > 90.0f) EyeElevationInDegrees = 90.0f;
 			}
 
 			// keyboard movement - move camera
@@ -433,93 +448,115 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 				}
 
 				ex = ez = 0.0f;
+				movementInTheX = movementInTheZ = 0.0f;
+				float EyeAzimuthInRadians = 0.0f;
 				
 				// using standard wsad for movement
 				// fwd bck strafe left and strafe right
 				if (keystate[DIK_W] == (unsigned char)128) {
 					if (keystate[DIK_A] == (unsigned char)128) {
-						moveDir = azimuth - 45.0f;
-						erad = DEG2RAD(moveDir);
-						ex = sinf(erad);
-						ez = cosf(erad);
+						MovementDirectionInDegrees = EyeAzimuthInDegrees - 45.0f;
+						EyeAzimuthInRadians = DEG2RAD(MovementDirectionInDegrees);
+						ex = sinf(EyeAzimuthInRadians);
+						ez = cosf(EyeAzimuthInRadians);
 					}
 					else if (keystate[DIK_D] == (unsigned char)128) {
-						moveDir = azimuth + 45.0f;
-						erad = DEG2RAD(moveDir);
-						ex = sinf(erad);
-						ez = cosf(erad);
+						MovementDirectionInDegrees = EyeAzimuthInDegrees + 45.0f;
+						EyeAzimuthInRadians = DEG2RAD(MovementDirectionInDegrees);
+						ex = sinf(EyeAzimuthInRadians);
+						ez = cosf(EyeAzimuthInRadians);
 					}
 					else {
-						moveDir = azimuth;
-						erad = DEG2RAD(moveDir);
-						ex = sinf(erad);
-						ez = cosf(erad);
+						MovementDirectionInDegrees = EyeAzimuthInDegrees;
+						EyeAzimuthInRadians = DEG2RAD(MovementDirectionInDegrees);
+						ex = sinf(EyeAzimuthInRadians);
+						ez = cosf(EyeAzimuthInRadians);
 					}
 				} else if (keystate[DIK_S] == (unsigned char)128) {
 					if (keystate[DIK_A] == (unsigned char)128) {
-						moveDir = azimuth - 135.0f;
-						erad = DEG2RAD(moveDir);
-						ex = sinf(erad);
-						ez = cosf(erad);
+						MovementDirectionInDegrees = EyeAzimuthInDegrees - 135.0f;
+						EyeAzimuthInRadians = DEG2RAD(MovementDirectionInDegrees);
+						ex = sinf(EyeAzimuthInRadians);
+						ez = cosf(EyeAzimuthInRadians);
 					}
 					else if (keystate[DIK_D] == (unsigned char)128) {
-						moveDir = azimuth + 135.0f;
-						erad = DEG2RAD(moveDir);
-						ex = sinf(erad);
-						ez = cosf(erad);
+						MovementDirectionInDegrees = EyeAzimuthInDegrees + 135.0f;
+						EyeAzimuthInRadians = DEG2RAD(MovementDirectionInDegrees);
+						ex = sinf(EyeAzimuthInRadians);
+						ez = cosf(EyeAzimuthInRadians);
 					}
 					else {
-						moveDir = azimuth + 180.0f;
-						erad = DEG2RAD(moveDir);
-						ex = sinf(erad);
-						ez = cosf(erad);
+						MovementDirectionInDegrees = EyeAzimuthInDegrees + 180.0f;
+						EyeAzimuthInRadians = DEG2RAD(MovementDirectionInDegrees);
+						ex = sinf(EyeAzimuthInRadians);
+						ez = cosf(EyeAzimuthInRadians);
 					}
 				} else if (keystate[DIK_A] == (unsigned char)128) {
-					moveDir = azimuth - 90.0f;
-					erad = DEG2RAD(moveDir);
-					ex = sinf(erad);
-					ez = cosf(erad);
+					MovementDirectionInDegrees = EyeAzimuthInDegrees - 90.0f;
+					EyeAzimuthInRadians = DEG2RAD(MovementDirectionInDegrees);
+					ex = sinf(EyeAzimuthInRadians);
+					ez = cosf(EyeAzimuthInRadians);
 				} else if (keystate[DIK_D] == (unsigned char)128) {
-					moveDir = azimuth + 90.0f;
-					erad = DEG2RAD(moveDir);
-					ex = sinf(erad);
-					ez = cosf(erad);
+					MovementDirectionInDegrees = EyeAzimuthInDegrees + 90.0f;
+					EyeAzimuthInRadians = DEG2RAD(MovementDirectionInDegrees);
+					ex = sinf(EyeAzimuthInRadians);
+					ez = cosf(EyeAzimuthInRadians);
 				}
-				pz += walkDist * ez;
-				px -= walkDist * ex;
+
+				movementInTheX = -1.0 * WalkingStride * ex;
+				movementInTheZ = WalkingStride * ez;
+
+				px += movementInTheX;
+				pz += movementInTheZ;
 			}
 		}
 
+		// find movement in the y direction (change in elevation)
+		// py is not changed in this process
+		// only the movement is changed
+		// each use subsequent use of py must add the elevation change
+		// py is an absolute elevation - not a change in elevation
 		// find the triangle directly underneath the camera
-		Point origin(-px, py + elevationAddr, -pz);
+		Point originMid(-px, _py + midHeight + movementInTheY, -pz);
 		Point ray(0.0f, -1.0f, 0.0f);
 		Point unitraylen = ray * 100.0f;
-		Point farpt = origin + unitraylen;
-		segment los{ { origin.x, origin.y, origin.z },{ farpt.x, farpt.y, farpt.z } };
+		Point farpt = originMid + unitraylen;
+		GSegmentModel los{ { originMid.x, originMid.y, originMid.z },{ farpt.x, farpt.y, farpt.z } };
 		Point elevationPoint;
 		unsigned int triangleBelow = FindClosestTriThatIntersectsLine(
-			rtree, los, AllTris, origin, ray, elevationPoint, NULL);
+			GSpatialIndex, los, AllTris, originMid, ray, elevationPoint, NULL);
+		if (triangleBelow != NO_TRIANGLE_FOUND) {
+			movementInTheY = elevationPoint.y;
+		}
+
+		// we've got our new position
+		// now, construct a box around the upper portion of
+		// the body - mid height to eye height, 3x x 3z
+		GBoxModel UpperBody = { 
+			{ -px - 1.5f, _py + midHeight + movementInTheY, -pz - 1.5f },
+			{ -px + 1.5f, _py + eyeHeight + movementInTheY, -pz + 1.5f } 
+		};
+		std::vector<GValueModel> IntersectResult_UpperBody;
+		GSpatialIndex.query(boost::geometry::index::intersects(UpperBody), std::back_inserter(IntersectResult_UpperBody));
+		fprintf(log, "intersect result upper body %i\n", IntersectResult_UpperBody.size());
 
 		// find the triangle that is being "looked at"
 		// origin doesn't change
-		ray.x = cosf(DEG2RAD(elevation)) * -sinf(DEG2RAD(azimuth));
-		ray.y = sinf(DEG2RAD(elevation));
-		ray.z = cosf(DEG2RAD(elevation)) * cosf(DEG2RAD(azimuth));
+		Point originEye(-px, _py + eyeHeight + movementInTheY, -pz);
+		ray.x = cosf(DEG2RAD(EyeElevationInDegrees)) * -sinf(DEG2RAD(EyeAzimuthInDegrees));
+		ray.y = sinf(DEG2RAD(EyeElevationInDegrees));
+		ray.z = cosf(DEG2RAD(EyeElevationInDegrees)) * cosf(DEG2RAD(EyeAzimuthInDegrees));
 		Point unitray = ray.MakeUnit();
 		unitraylen = ray * 100.0f;
 		Point oppRay = ray * -1.0;
-		farpt = origin - unitraylen;
-		segment los2{ { origin.x, origin.y, origin.z },{ farpt.x, farpt.y, farpt.z } };
+		farpt = originEye - unitraylen;
+		GSegmentModel los2{ { originEye.x, originEye.y, originEye.z },{ farpt.x, farpt.y, farpt.z } };
 		Point pout;
 		//fprintf(log, "origin %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
 		//fprintf(log, "oppRay %.1f, %.1f, %.1f\n", oppRay.x, oppRay.y, oppRay.z);
 		//fprintf(log, "farpt %.1f, %.1f, %.1f\n", farpt.x, farpt.y, farpt.z);
 		unsigned int triangleLookingAt = FindClosestTriThatIntersectsLine(
-			rtree, los2, AllTris, origin, oppRay, pout, log);
-
-		if (triangleBelow != NO_TRIANGLE_FOUND) {
-			elevationAddr = elevationPoint.y;
-		}
+			GSpatialIndex, los2, AllTris, originEye, oppRay, pout, NULL);
 
 		// RENDER SCENE BEGIN
 
@@ -536,17 +573,17 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			glLoadIdentity();
 
 			// direction look l/r
-			glRotatef(azimuth, 0.0f, 1.0f, 0.0);
+			glRotatef(EyeAzimuthInDegrees, 0.0f, 1.0f, 0.0);
 
-			float erad = DEG2RAD(azimuth);
-			GLfloat eex = cosf(erad);
-			GLfloat eez = sinf(erad);
+			float EyeAzimuthInRadians = DEG2RAD(EyeAzimuthInDegrees);
+			GLfloat eex = cosf(EyeAzimuthInRadians);
+			GLfloat eez = sinf(EyeAzimuthInRadians);
 
 			// elevation look u/d
-			glRotatef(elevation, eex, 0.0f, eez);
+			glRotatef(EyeElevationInDegrees, eex, 0.0f, eez);
 
 			// position x/y
-			glTranslatef(px, -1.0f * (py + elevationAddr), pz);
+			glTranslatef(px, -1.0f * (_py + eyeHeight + movementInTheY), pz);
 
 			// draw the grid (white)
 			glColor3f(1.0f, 1.0f, 1.0f);
@@ -611,18 +648,18 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		// debugging messages - for now
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glRasterPos2i(4, 18);
-		FontPrintf(pFont, 1, "hello world %i", (int)fps);
+		FontPrintf(pFont, 1, "fps %i", (int)FramesPerSecond);
 
 		SYSTEMTIME stime;
 		GetSystemTime(&stime);
 		glRasterPos2i(4, 36);
 		FontPrintf(pFont, 1, "%02i:%02i:%02i\n", stime.wHour, stime.wMinute, stime.wSecond);
 
-		glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 10);
-		FontPrintf(pFont, 1, "%.0f degrees", azimuth);
+		//glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 10);
+		//FontPrintf(pFont, 1, "%.0f degrees", EyeAzimuthInDegrees);
 
-		glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 24);
-		FontPrintf(pFont, 1, "%.4f, %.4f", ex, ez);
+		//glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 24);
+		//FontPrintf(pFont, 1, "%.4f, %.4f", ex, ez);
 
 		// finish it all
 		glFinish();
