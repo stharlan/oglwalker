@@ -17,9 +17,13 @@ public:
 	float MaxZ() { return max(max(p1.z, p2.z), p3.z); }
 	Point MinBox();
 	Point MaxBox();
+	Point SurfaceNormal();
+	Point Centroid();
 
 	Point p1;
 	Point p2;
 	Point p3;
+	Point sfcnrml;
+	Point cntrd;
 };
 

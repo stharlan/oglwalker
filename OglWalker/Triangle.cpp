@@ -15,6 +15,8 @@ Triangle::Triangle(const Triangle& t)
 	this->p1 = t.p1;
 	this->p2 = t.p2;
 	this->p3 = t.p3;
+	this->sfcnrml = this->SurfaceNormal().MakeUnit();
+	this->cntrd = this->Centroid();
 }
 
 Triangle& Triangle::operator=(const Triangle& t)
@@ -22,6 +24,8 @@ Triangle& Triangle::operator=(const Triangle& t)
 	this->p1 = t.p1;
 	this->p2 = t.p2;
 	this->p3 = t.p3;
+	this->sfcnrml = this->SurfaceNormal().MakeUnit();
+	this->cntrd = this->Centroid();
 	return *this;
 }
 
@@ -35,6 +39,8 @@ void Triangle::Set(Point& pp1, Point& pp2, Point& pp3)
 	this->p1 = pp1;
 	this->p2 = pp2;
 	this->p3 = pp3;
+	this->sfcnrml = this->SurfaceNormal().MakeUnit();
+	this->cntrd = this->Centroid();
 }
 
 void Triangle::Draw()
@@ -58,4 +64,19 @@ Point Triangle::MaxBox()
 		max(max(p1.x, p2.x), p3.x),
 		max(max(p1.y, p2.y), p3.y),
 		max(max(p1.z, p2.z), p3.z));
+}
+
+Point Triangle::SurfaceNormal()
+{
+	Point v1 = p2 - p1;
+	Point v2 = p3 - p1;
+	return v1.crossProduct(v2);
+}
+
+Point Triangle::Centroid()
+{
+	return Point(
+		(p1.x + p2.x + p3.x) / 3.0f,
+		(p1.y + p2.y + p3.y) / 3.0f,
+		(p1.z + p2.z + p3.z) / 3.0f);
 }

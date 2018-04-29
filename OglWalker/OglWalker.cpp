@@ -374,6 +374,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	float movementInTheX = 0.0f;
 	float movementInTheY = 0.0f;
 	float movementInTheZ = 0.0f;
+	float proposedMovementInTheY = 0.0f;
 
 	FILE* log = NULL;
 	fopen_s(&log, "c:\\temp\\rt.log", "w");
@@ -421,6 +422,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		float WalkingStride = 25.0f / FramesPerSecond;
 		lastCount = perfCount.QuadPart;
 
+		movementInTheX = movementInTheZ = 0.0f;
+
 		// find movement in the x and z directions
 		// process direct input
 		if (TRUE == ctx->useDI) {
@@ -448,7 +451,6 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 				}
 
 				ex = ez = 0.0f;
-				movementInTheX = movementInTheZ = 0.0f;
 				float EyeAzimuthInRadians = 0.0f;
 				
 				// using standard wsad for movement
@@ -526,19 +528,43 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		unsigned int triangleBelow = FindClosestTriThatIntersectsLine(
 			GSpatialIndex, los, AllTris, originMid, ray, elevationPoint, NULL);
 		if (triangleBelow != NO_TRIANGLE_FOUND) {
-			movementInTheY = elevationPoint.y;
+			//movementInTheY = elevationPoint.y;
+			proposedMovementInTheY = elevationPoint.y;
 		}
 
 		// we've got our new position
 		// now, construct a box around the upper portion of
 		// the body - mid height to eye height, 3x x 3z
 		GBoxModel UpperBody = { 
-			{ -px - 1.5f, _py + midHeight + movementInTheY, -pz - 1.5f },
-			{ -px + 1.5f, _py + eyeHeight + movementInTheY, -pz + 1.5f } 
+			{ -px - 1.5f, _py + midHeight + proposedMovementInTheY, -pz - 1.5f },
+			{ -px + 1.5f, _py + eyeHeight + proposedMovementInTheY, -pz + 1.5f }
 		};
 		std::vector<GValueModel> IntersectResult_UpperBody;
 		GSpatialIndex.query(boost::geometry::index::intersects(UpperBody), std::back_inserter(IntersectResult_UpperBody));
 		fprintf(log, "intersect result upper body %i\n", IntersectResult_UpperBody.size());
+		if (IntersectResult_UpperBody.size() > 0) {
+			// if  hit something,  undo the x/z move
+			px -= movementInTheX;
+			pz -= movementInTheZ;
+		}
+		else {
+			// if not hit something, apply the new y
+			movementInTheY = proposedMovementInTheY;
+		}
+
+		// two problems:
+		// 1. when the walker hits a wall, it stops moving
+		//    when it should walk along the wall
+		//    need to find the component of the movement
+		//    vector parallel to the triangle and allow
+		//    that
+		//    need to compare movement vector to triangle
+		//    normal vector
+		// 2. when the walker tries to walk off something
+		//    high, it hits the lower ground, but, is now
+		//    in violation of intersecting the thing it
+		//    just fell off of, so, it's not allowed to
+		//    fall off an object >= 3
 
 		// find the triangle that is being "looked at"
 		// origin doesn't change
@@ -614,6 +640,18 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			//glVertex3f(farpt.x, farpt.y, farpt.z);
 			//glEnd();
 
+			// draw surface normals
+			//glBegin(GL_LINES);
+			//for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+			//{
+				//glVertex3f(iter->cntrd.x, iter->cntrd.y, iter->cntrd.z);
+				//glVertex3f(
+					//iter->cntrd.x + iter->sfcnrml.x,
+					//iter->cntrd.y + iter->sfcnrml.y,
+					//iter->cntrd.z + iter->sfcnrml.z);
+			//}
+			//glEnd();
+
 			// set back to white lines
 			glColor3f(1.0f, 1.0f, 1.0f);
 			glPolygonMode(GL_FRONT, GL_LINE);
@@ -655,8 +693,9 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		glRasterPos2i(4, 36);
 		FontPrintf(pFont, 1, "%02i:%02i:%02i\n", stime.wHour, stime.wMinute, stime.wSecond);
 
-		//glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 10);
+		glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 10);
 		//FontPrintf(pFont, 1, "%.0f degrees", EyeAzimuthInDegrees);
+		FontPrintf(pFont, 1, "isect body %i", IntersectResult_UpperBody.size());
 
 		//glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 24);
 		//FontPrintf(pFont, 1, "%.4f, %.4f", ex, ez);
@@ -695,6 +734,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	//Point result;
 	//bool b = RayIntersectsTriangle(origin, ray, t, result);
 	//fprintf(g_log, "%i %.1f %.1f %.1f\n", b, result.x, result.y, result.z);
+
+	//Point a(5, 1, 0);
+	//Point b(-1, 0, 0);
+	//float adotb = a.dotProduct(b);
+	//float bdotb = b.dotProduct(b);
+	//Point rp = b * (adotb / bdotb);
+	//fprintf(g_log, "proj %.1f, %.1f, %.1f\n", rp.x, rp.y, rp.z);
+
+	//Point p1(0, 0, 0);
+	//Point p2(1, 0, 0);
+	//Point p3(1, 1, 0);
+	//Triangle t(p1, p2, p3);
+	//Point nv = t.SurfaceNormal();
+	//fprintf(g_log, "nv %.1f, %.1f, %.1f\n", nv.x, nv.y, nv.z);
 
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
