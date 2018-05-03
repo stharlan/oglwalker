@@ -100,7 +100,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Library\boost_1_67_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\boost_1_67_0;C:\Library\glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -131,7 +131,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Library\boost_1_67_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\boost_1_67_0;C:\Library\glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -147,8 +147,8 @@
     <ClInclude Include="CubeObject.h" />
     <ClInclude Include="GeometryOperations.h" />
     <ClInclude Include="I3DObject.h" />
+    <ClInclude Include="obj_loader.h" />
     <ClInclude Include="OglWalker.h" />
-    <ClInclude Include="Point.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -159,7 +159,6 @@
     <ClCompile Include="GeometryOperations.cpp" />
     <ClCompile Include="I3DObject.cpp" />
     <ClCompile Include="OglWalker.cpp" />
-    <ClCompile Include="Point.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

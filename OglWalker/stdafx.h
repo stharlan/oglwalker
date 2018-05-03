@@ -6,8 +6,8 @@
 #pragma once
 
 #include "targetver.h"
-
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+
 // Windows Header Files:
 #include <windows.h>
 
@@ -33,9 +33,14 @@
 
 #include <boost/geometry/index/rtree.hpp>
 
+#include <glm/vec3.hpp>
+#include <glm/geometric.hpp>
+
 #include "I3DObject.h"
-#include "Point.h"
+//#include "Point.h"
 #include "Triangle.h"
 #include "CubeObject.h"
 #include "GeometryOperations.h"
+
+#include "obj_loader.h"
 

@@ -203,10 +203,10 @@ void RenderScene(int w, int h, float fps, float azimuth, float elevation,
 */
 
 void AddCubeTris(CubeObject& c1,
-	std::vector<Triangle>& AllTris,
+	std::vector<oglw::Triangle>& AllTris,
 	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> >& GSpatialIndex)
 {
-	for (std::vector<Triangle>::iterator iter = c1.tris.begin(); iter != c1.tris.end(); ++iter)
+	for (std::vector<oglw::Triangle>::iterator iter = c1.tris.begin(); iter != c1.tris.end(); ++iter)
 	{
 		AllTris.push_back(*iter);
 		GBoxModel b {
@@ -219,7 +219,7 @@ void AddCubeTris(CubeObject& c1,
 
 #define ADDCUBE(a,b,c,d,e,f) AddCubeTris(CubeObject(a,b,c,d,e,f), AllTris, GSpatialIndex);
 
-void AddSomeStuff(std::vector<Triangle>& AllTris,
+void AddSomeStuff(std::vector<oglw::Triangle>& AllTris,
 	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> >& GSpatialIndex)
 {
 	// floor
@@ -247,10 +247,10 @@ void AddSomeStuff(std::vector<Triangle>& AllTris,
 unsigned int FindClosestTriThatIntersectsLine(
 	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> >& GSpatialIndex,
 	GSegmentModel& line, 
-	std::vector<Triangle>& tris,
-	Point& origin,
-	Point& ray,
-	Point& intersectionPoint,
+	std::vector<oglw::Triangle>& tris,
+	glm::vec3& origin,
+	glm::vec3& ray,
+	glm::vec3& intersectionPoint,
 	FILE* log)
 {
 	if (log != NULL) fprintf(log, "<= FindClosestTriThatIntersectsLine =>\n");
@@ -261,7 +261,7 @@ unsigned int FindClosestTriThatIntersectsLine(
 
 	unsigned int indexOfClosestTri = NO_TRIANGLE_FOUND;
 	float mindist = FLT_MAX;
-	Point pout;
+	glm::vec3 pout;
 
 	if (log != NULL) {
 		fprintf(log, "origin %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
@@ -270,7 +270,7 @@ unsigned int FindClosestTriThatIntersectsLine(
 
 	for (std::vector<GValueModel>::iterator iter = result_n.begin(); iter != result_n.end(); ++iter)
 	{
-		Triangle tri = tris.at(iter->second);
+		oglw::Triangle tri = tris.at(iter->second);
 		if (log != NULL) {
 			fprintf(log, "tri index = %i\n", iter->second);
 			fprintf(log, "trip1 %.1f, %.1f, %.1f\n", tri.p1.x, tri.p1.y, tri.p1.z);
@@ -290,7 +290,8 @@ unsigned int FindClosestTriThatIntersectsLine(
 			fprintf(log, "result %i - pout %.1f, %.1f, %.1f\n", b, pout.x, pout.y, pout.z);
 		}
 		if (b) {
-			float dist = origin.Distance(pout);
+			//float dist = origin.Distance(pout);
+			float dist = glm::distance(origin, pout);
 			if (dist < mindist) {
 				mindist = dist;
 				indexOfClosestTri = iter->second;
@@ -305,7 +306,7 @@ unsigned int FindClosestTriThatIntersectsLine(
 	return indexOfClosestTri;
 }
 
-void ProcessFloor(Point& p) {
+void ProcessFloor(glm::vec3& p) {
 	if (p.x >= 30.0f && p.z <= -30.0f) {
 		p.y = 5.0f;
 	}
@@ -321,7 +322,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	// create the rtree using default constructor
 	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> > GSpatialIndex;
 
-	std::vector<Triangle> AllTris;
+	std::vector<oglw::Triangle> AllTris;
 
 	// add a floor
 	/*
@@ -519,12 +520,12 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		// each use subsequent use of py must add the elevation change
 		// py is an absolute elevation - not a change in elevation
 		// find the triangle directly underneath the camera
-		Point originMid(-px, _py + midHeight + movementInTheY, -pz);
-		Point ray(0.0f, -1.0f, 0.0f);
-		Point unitraylen = ray * 100.0f;
-		Point farpt = originMid + unitraylen;
+		glm::vec3 originMid(-px, _py + midHeight + movementInTheY, -pz);
+		glm::vec3 ray(0.0f, -1.0f, 0.0f);
+		glm::vec3 unitraylen = ray * 100.0f;
+		glm::vec3 farpt = originMid + unitraylen;
 		GSegmentModel los{ { originMid.x, originMid.y, originMid.z },{ farpt.x, farpt.y, farpt.z } };
-		Point elevationPoint;
+		glm::vec3 elevationPoint;
 		unsigned int triangleBelow = FindClosestTriThatIntersectsLine(
 			GSpatialIndex, los, AllTris, originMid, ray, elevationPoint, NULL);
 		if (triangleBelow != NO_TRIANGLE_FOUND) {
@@ -535,6 +536,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		// we've got our new position
 		// now, construct a box around the upper portion of
 		// the body - mid height to eye height, 3x x 3z
+		/*
 		GBoxModel UpperBody = { 
 			{ -px - 1.5f, _py + midHeight + proposedMovementInTheY, -pz - 1.5f },
 			{ -px + 1.5f, _py + eyeHeight + proposedMovementInTheY, -pz + 1.5f }
@@ -551,6 +553,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			// if not hit something, apply the new y
 			movementInTheY = proposedMovementInTheY;
 		}
+		*/
+		movementInTheY = proposedMovementInTheY;
 
 		// two problems:
 		// 1. when the walker hits a wall, it stops moving
@@ -568,16 +572,17 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 		// find the triangle that is being "looked at"
 		// origin doesn't change
-		Point originEye(-px, _py + eyeHeight + movementInTheY, -pz);
+		glm::vec3 originEye(-px, _py + eyeHeight + movementInTheY, -pz);
 		ray.x = cosf(DEG2RAD(EyeElevationInDegrees)) * -sinf(DEG2RAD(EyeAzimuthInDegrees));
 		ray.y = sinf(DEG2RAD(EyeElevationInDegrees));
 		ray.z = cosf(DEG2RAD(EyeElevationInDegrees)) * cosf(DEG2RAD(EyeAzimuthInDegrees));
-		Point unitray = ray.MakeUnit();
+		//glm::vec3 unitray = ray.MakeUnit();
+		glm::vec3 unitray = glm::normalize(ray);
 		unitraylen = ray * 100.0f;
-		Point oppRay = ray * -1.0;
+		glm::vec3 oppRay = ray * -1.0f;
 		farpt = originEye - unitraylen;
 		GSegmentModel los2{ { originEye.x, originEye.y, originEye.z },{ farpt.x, farpt.y, farpt.z } };
-		Point pout;
+		glm::vec3 pout;
 		//fprintf(log, "origin %.1f, %.1f, %.1f\n", origin.x, origin.y, origin.z);
 		//fprintf(log, "oppRay %.1f, %.1f, %.1f\n", oppRay.x, oppRay.y, oppRay.z);
 		//fprintf(log, "farpt %.1f, %.1f, %.1f\n", farpt.x, farpt.y, farpt.z);
@@ -617,7 +622,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			glBegin(GL_TRIANGLES);
 			{
 				glLineWidth(1.0f);
-				for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+				for (std::vector<oglw::Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
 					iter->Draw();
 			}
 			glEnd();
@@ -628,7 +633,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			glBegin(GL_TRIANGLES);
 			{
 				unsigned int ctr = 0;
-				for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+				for (std::vector<oglw::Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
 				{
 					if (ctr == triangleBelow || ctr == triangleLookingAt) iter->Draw();
 					ctr++;
@@ -695,7 +700,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 		glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 10);
 		//FontPrintf(pFont, 1, "%.0f degrees", EyeAzimuthInDegrees);
-		FontPrintf(pFont, 1, "isect body %i", IntersectResult_UpperBody.size());
+		//FontPrintf(pFont, 1, "isect body %i", IntersectResult_UpperBody.size());
 
 		//glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 24);
 		//FontPrintf(pFont, 1, "%.4f, %.4f", ex, ez);
@@ -727,6 +732,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
 
 	fopen_s(&g_log, "c:\\temp\\ow.log", "w");
+
+	//objl::Loader loader;
+	//std::string objfile = "";
+	//bool bRet = loader.LoadFile(objfile);
 
 	//Point origin(0, 0, 0);
 	//Point ray(0, -1, 0);

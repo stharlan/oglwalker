@@ -21,6 +21,6 @@ private:
 	float dy;
 	float dz;
 public:
-	std::vector<Triangle> tris;
+	std::vector<oglw::Triangle> tris;
 };
 

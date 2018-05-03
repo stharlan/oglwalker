@@ -33,10 +33,10 @@ void CubeObject::AddTri(
 	float f4, float f5, float f6,
 	float f7, float f8, float f9)
 {
-	Point p1(f1, f2, f3);
-	Point p2(f4, f5, f6);
-	Point p3(f7, f8, f9);
-	Triangle t(p1, p2, p3);
+	glm::vec3 p1(f1, f2, f3);
+	glm::vec3 p2(f4, f5, f6);
+	glm::vec3 p3(f7, f8, f9);
+	oglw::Triangle t(p1, p2, p3);
 	this->tris.push_back(t);
 }
 
@@ -63,7 +63,7 @@ void CubeObject::Draw()
 	// y is the height
 	glBegin(GL_TRIANGLES);
 
-	for (std::vector<Triangle>::iterator it = this->tris.begin(); it != this->tris.end(); ++it)
+	for (std::vector<oglw::Triangle>::iterator it = this->tris.begin(); it != this->tris.end(); ++it)
 		it->Draw();
 
 	glEnd();
