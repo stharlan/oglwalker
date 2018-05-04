@@ -49,6 +49,7 @@ namespace oglw {
 
 	void Triangle::Draw()
 	{
+		glNormal3f(this->sfcnrml.x, this->sfcnrml.y, this->sfcnrml.z);
 		glVertex3f(this->p1.x, this->p1.y, this->p1.z);
 		glVertex3f(this->p2.x, this->p2.y, this->p2.z);
 		glVertex3f(this->p3.x, this->p3.y, this->p3.z);

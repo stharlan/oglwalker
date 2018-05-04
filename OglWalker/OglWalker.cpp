@@ -62,14 +62,30 @@ void SetupRC()
 {
 	pFont = FontCreate(wglGetCurrentDC(), L"Arial", 18, 0, 0);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_LINE_SMOOTH);
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_POLYGON_SMOOTH);
+	//glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glEnable(GL_LINE_SMOOTH);
+	//glEnable(GL_POINT_SMOOTH);
+	//glEnable(GL_POLYGON_SMOOTH);
+	
+	glEnable(GL_DEPTH_TEST);
+	glFrontFace(GL_CCW);
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_CW);
-	glPointSize(20.0f);
+
+	//glCullFace(GL_CW);
+	//glPointSize(20.0f);
+
+	glEnable(GL_LIGHTING);
+	GLfloat ambientLight[] = { 0.3f,0.3f,0.3f,1.0f };
+	GLfloat diffuseLight[] = { 0.7f,0.7f,0.7f,1.0f };
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+	glEnable(GL_LIGHT0);
+	//glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientLight);
+	glEnable(GL_COLOR_MATERIAL);
+	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void SetPerspective(int w, int h)
@@ -592,7 +608,6 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		// RENDER SCENE BEGIN
 
 		// clear stuff
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// set a perspective matrix
@@ -617,19 +632,19 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			glTranslatef(px, -1.0f * (_py + eyeHeight + movementInTheY), pz);
 
 			// draw the grid (white)
-			glColor3f(1.0f, 1.0f, 1.0f);
-			glPolygonMode(GL_FRONT, GL_LINE);
+			glColor3f(0.9f, 0.9f, 1.0f);
+			glPolygonMode(GL_FRONT, GL_FILL);
 			glBegin(GL_TRIANGLES);
 			{
-				glLineWidth(1.0f);
+				//glLineWidth(1.0f);
 				for (std::vector<oglw::Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
 					iter->Draw();
 			}
 			glEnd();
 
 			// draw some red triangles
+			/*
 			glColor3f(1.0f, 0.0f, 0.0f);
-			//glPolygonMode(GL_FRONT, GL_FILL);
 			glBegin(GL_TRIANGLES);
 			{
 				unsigned int ctr = 0;
@@ -640,6 +655,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 				}
 			}
 			glEnd();
+			*/
 
 			//glBegin(GL_POINTS);
 			//glVertex3f(farpt.x, farpt.y, farpt.z);
@@ -659,7 +675,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 			// set back to white lines
 			glColor3f(1.0f, 1.0f, 1.0f);
-			glPolygonMode(GL_FRONT, GL_LINE);
+			glPolygonMode(GL_FRONT, GL_FILL);
 
 			// draw a sphere
 			glPushMatrix();
