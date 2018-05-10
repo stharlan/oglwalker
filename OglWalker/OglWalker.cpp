@@ -9,8 +9,6 @@
 #define DEG2RAD(x) (x * PI / 180.0f)
 #define CUSTOM_QUIT (WM_USER + 1)
 #define NO_TRIANGLE_FOUND UINT_MAX
-#define MIN3(a,b,c) (a < b ? (a < c ? a : c) : (b < c ? b : c))
-#define MAX3(a,b,c) (a > b ? (a > c ? a : c) : (b > c ? b : c))
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -62,8 +60,6 @@ FILE* g_log;
 
 void SetupRC()
 {
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
 	pFont = FontCreate(wglGetCurrentDC(), L"Arial", 18, 0, 0);
 
 	//glEnable(GL_BLEND);
@@ -89,6 +85,7 @@ void SetupRC()
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void SetPerspective(int w, int h)
@@ -111,40 +108,115 @@ void SetOrtho(int w, int h)
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void AddCubeTris(CubeObject& c1,
-	std::vector<glm::vec3>& vrts,
-	std::vector <glm::uvec3>& idxs,
-	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> >& GSpatialIndex)
+/*
+void RenderScene(int w, int h, float fps, float azimuth, float elevation,
+	float px, float py, float pz, float ex, float ez, std::vector<Triangle> &AllTris,
+	int u1, unsigned int u3,
+	Point& lpt, unsigned int u5)
+//void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
 {
-	for (std::vector<oglw::Triangle>::iterator iter = c1.tris.begin(); iter != c1.tris.end(); ++iter)
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	SetPerspective(w, h);
+	
+	// create a grid of triangles as a "floor"
+	glPushMatrix();
 	{
-		unsigned int vsize = vrts.size();
+		glLoadIdentity();
 
-		glm::vec3 v1 = { iter->p1.x, iter->p1.y, iter->p1.z };
-		vrts.push_back(v1);
-		glm::vec3 v2 = { iter->p2.x, iter->p2.y, iter->p2.z };
-		vrts.push_back(v2);
-		glm::vec3 v3 = { iter->p3.x, iter->p3.y, iter->p3.z };
-		vrts.push_back(v3);
+		// direction look l/r
+		glRotatef(azimuth, 0.0f, 1.0f, 0.0);
 
-		glm::uvec3 i1 = { vsize, vsize + 1, vsize + 2 };
-		idxs.push_back(i1);
+		float erad = DEG2RAD(azimuth);
+		GLfloat eex = cosf(erad);
+		GLfloat eez = sinf(erad);
 
-		GBoxModel b{
-			{ 
-				MIN3(iter->p1.x,iter->p2.x,iter->p3.x), 
-				MIN3(iter->p1.y,iter->p2.y,iter->p3.y),
-				MIN3(iter->p1.z,iter->p2.z,iter->p3.z)
-			},
-			{ 
-				MAX3(iter->p1.x,iter->p2.x,iter->p3.x),
-				MAX3(iter->p1.y,iter->p2.y,iter->p3.y),
-				MAX3(iter->p1.z,iter->p2.z,iter->p3.z)
+		// elevation look u/d
+		glRotatef(elevation, eex, 0.0f, eez);
+
+		// position x/y
+		glTranslatef(px, -1.0f * py, pz);
+
+		// draw the grid (white)
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glPolygonMode(GL_FRONT, GL_LINE);
+		glBegin(GL_TRIANGLES);
+		{
+			glLineWidth(1.0f);
+			for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+				iter->Draw();
+		}
+		glEnd();
+
+		// draw some red triangles
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glPolygonMode(GL_FRONT, GL_FILL);
+		glBegin(GL_TRIANGLES);
+		{
+			unsigned int ctr = 0;
+			for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+			{
+				if (ctr == u3 || ctr == u5) iter->Draw();
+				ctr++;
 			}
-		};
-		GSpatialIndex.insert(std::make_pair(b, (unsigned)(idxs.size() - 1)));
+		}
+		glEnd();
+		glBegin(GL_POINTS);
+		glVertex3f(lpt.x, lpt.y, lpt.z);
+		glEnd();
+
+		// set back to white lines
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glPolygonMode(GL_FRONT, GL_LINE);
+
+		// draw a sphere
+		glPushMatrix();
+		{
+			glTranslatef(-10.0f, 10.0f, -10.0f);
+			GLUquadric* pquad = gluNewQuadric();
+			gluSphere(pquad, 5, 10, 10);
+			gluDeleteQuadric(pquad);
+		}
+		glPopMatrix();
+
 	}
+	glPopMatrix();
+
+	// create a "crosshair" in the middle of the screen
+	SetOrtho(w, h); 
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glLineWidth(1.0f);
+	glBegin(GL_LINES);
+	{
+		glVertex2i((w / 2) - 10, h / 2);
+		glVertex2i((w / 2) + 10, h / 2);
+		glVertex2i(w / 2, (h / 2) - 10);
+		glVertex2i(w / 2, (h / 2) + 10);
+	}
+	glEnd();
+
+	// draw some text on the screen
+	// debugging messages - for now
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glRasterPos2i(4, 18);
+	FontPrintf(pFont, 1, "hello world %i", (int)fps);
+
+	SYSTEMTIME stime;
+	GetSystemTime(&stime);
+	glRasterPos2i(4, 36);
+	FontPrintf(pFont, 1, "%02i:%02i:%02i\n", stime.wHour, stime.wMinute, stime.wSecond);
+
+	glRasterPos2i((w / 2) + 10, (h / 2) + 10);
+	FontPrintf(pFont, 1, "%.0f degrees", azimuth);
+
+	glRasterPos2i((w / 2) + 10, (h / 2) + 24);
+	FontPrintf(pFont, 1, "%.4f, %.4f, pct %i", ex, ez, u1);
+
+	glFinish();
+
 }
+*/
 
 void AddCubeTris(CubeObject& c1,
 	std::vector<oglw::Triangle>& AllTris,
@@ -159,36 +231,6 @@ void AddCubeTris(CubeObject& c1,
 		};
 		GSpatialIndex.insert(std::make_pair(b, (unsigned)(AllTris.size() - 1)));
 	}
-}
-
-#define ADDCUBE2(a,b,c,d,e,f) AddCubeTris(CubeObject(a,b,c,d,e,f), vrts, idxs, GSpatialIndex);
-
-void AddSomeStuff(std::vector<glm::vec3>& vrts,
-	std::vector <glm::uvec3>& idxs,
-	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> >& GSpatialIndex)
-{
-	// floor
-	ADDCUBE2(-50, -1, -50, 100, 1, 100);
-
-	// walls
-	ADDCUBE2(-51, -1, -51, 101, 11, 1);
-	ADDCUBE2(-51, -1, 50, 101, 11, 1);
-	ADDCUBE2(50, -1, -51, 1, 11, 102);
-	ADDCUBE2(-51, -1, -50, 1, 11, 100);
-
-	ADDCUBE2(-50, 0, -50, 20, 1, 20);
-	ADDCUBE2(-50, 1, -50, 10, 1, 10);
-	ADDCUBE2(-50, 2, -50, 5, 1, 5);
-
-	ADDCUBE2(-20, 0, 20, 5, 2, 5);
-	ADDCUBE2(-25, 0, 20, 5, 3, 5);
-	ADDCUBE2(-30, 0, 20, 5, 4, 5);
-
-	ADDCUBE2(10, 0, 10, 10, 10, 1);
-	ADDCUBE2(10, 0, 20, 10, 10, 1);
-	ADDCUBE2(10, 10, 10, 10, 1, 11);
-
-	// glgenbuffers
 }
 
 #define ADDCUBE(a,b,c,d,e,f) AddCubeTris(CubeObject(a,b,c,d,e,f), AllTris, GSpatialIndex);
@@ -291,10 +333,54 @@ void ProcessFloor(glm::vec3& p) {
 
 DWORD WINAPI RenderingThreadEntryPoint(void* pVoid) 
 {
-	//std::vector<oglw::Triangle> AllTris;
-	std::vector<glm::vec3> vrts;
-	std::vector <glm::uvec3> idxs;
+	RENDER_THREAD_CONTEXT* ctx = (RENDER_THREAD_CONTEXT*)pVoid;
+
+	// create the rtree using default constructor
 	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> > GSpatialIndex;
+
+	std::vector<oglw::Triangle> AllTris;
+
+	// add a floor
+	/*
+	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
+		for (float z = -50.0f; z < 50.0f; z += 5.0f) {
+
+			float height = 0;
+
+			Point p1(x, height, z);
+			Point p2(x + 5.0f, height, z + 5.0f);
+			Point p3(x + 5.0f, height, z);
+			ProcessFloor(p1);
+			ProcessFloor(p2);
+			ProcessFloor(p3);
+			Triangle t1(p1, p2, p3);
+			Point p1min = t1.MinBox();
+			Point p1max = t1.MaxBox();
+			AllTris.push_back(t1);
+
+			box b1{ {p1min.x, p1min.y, p1min.z},{p1max.x, p1max.y, p1max.z} };
+			rtree.insert(std::make_pair(b1, (unsigned)(AllTris.size() - 1)));
+
+			Point p4(x, height, z);
+			Point p5(x, height, z + 5.0f);
+			Point p6(x + 5.0f, height, z + 5.0f);
+			ProcessFloor(p4);
+			ProcessFloor(p5);
+			ProcessFloor(p6);
+			Triangle t2(p4, p5, p6);
+			Point p2min = t2.MinBox();
+			Point p2max = t2.MaxBox();
+			AllTris.push_back(t2);
+
+			box b2{ { p2min.x, p2min.y, p2min.z },{ p2max.x, p2max.y, p2max.z } };
+			rtree.insert(std::make_pair(b2, (unsigned)(AllTris.size() - 1)));
+
+		}
+	}
+	*/
+
+	AddSomeStuff(AllTris, GSpatialIndex);
+
 	float EyeAzimuthInDegrees = 0.0f;
 	float EyeElevationInDegrees = 0.0f;
 	float px = 0.0f;
@@ -306,28 +392,22 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	float movementInTheY = 0.0f;
 	float movementInTheZ = 0.0f;
 	float proposedMovementInTheY = 0.0f;
+
 	FILE* log = NULL;
-	HDC hdc = NULL;
-	HGLRC hrc = NULL;
-	RECT rect = { 0 };
-
-	RENDER_THREAD_CONTEXT* ctx = (RENDER_THREAD_CONTEXT*)pVoid;
-
-	SetupRC();
-
-	//AddSomeStuff(AllTris, GSpatialIndex);
-	AddSomeStuff(vrts, idxs, GSpatialIndex);
-
 	fopen_s(&log, "c:\\temp\\rt.log", "w");
 
+
 	fprintf(log, "create rc\n");
-	hdc = GetDC(ctx->hWnd);
+	HDC hdc = GetDC(ctx->hWnd);
 	SetDCPixelFormat(hdc);
-	hrc = wglCreateContext(hdc);
+	HGLRC hrc = wglCreateContext(hdc);
 	wglMakeCurrent(hdc, hrc);
 
+	RECT rect;
 	GetClientRect(ctx->hWnd, &rect);
 	ChangeSize(rect.right, rect.bottom);
+
+	SetupRC();
 
 	LARGE_INTEGER perfCount;
 	LARGE_INTEGER perfFreq;
@@ -456,8 +536,6 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		// each use subsequent use of py must add the elevation change
 		// py is an absolute elevation - not a change in elevation
 		// find the triangle directly underneath the camera
-		// *** COMMENT OUT FOR NOW USES ALLTRIS ***
-		/*
 		glm::vec3 originMid(-px, _py + midHeight + movementInTheY, -pz);
 		glm::vec3 ray(0.0f, -1.0f, 0.0f);
 		glm::vec3 unitraylen = ray * 100.0f;
@@ -470,7 +548,6 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			//movementInTheY = elevationPoint.y;
 			proposedMovementInTheY = elevationPoint.y;
 		}
-		*/
 
 		// we've got our new position
 		// now, construct a box around the upper portion of
@@ -511,8 +588,6 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 		// find the triangle that is being "looked at"
 		// origin doesn't change
-		// *** COMMENT OUT FOR NOW USES ALLTRIS ***
-		/*
 		glm::vec3 originEye(-px, _py + eyeHeight + movementInTheY, -pz);
 		ray.x = cosf(DEG2RAD(EyeElevationInDegrees)) * -sinf(DEG2RAD(EyeAzimuthInDegrees));
 		ray.y = sinf(DEG2RAD(EyeElevationInDegrees));
@@ -529,7 +604,6 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		//fprintf(log, "farpt %.1f, %.1f, %.1f\n", farpt.x, farpt.y, farpt.z);
 		unsigned int triangleLookingAt = FindClosestTriThatIntersectsLine(
 			GSpatialIndex, los2, AllTris, originEye, oppRay, pout, NULL);
-		*/
 
 		// RENDER SCENE BEGIN
 
@@ -674,24 +748,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
 
 	fopen_s(&g_log, "c:\\temp\\ow.log", "w");
-
-	//FILE* jpegFile;
-	//fopen_s(&jpegFile, "c:\\temp\\black_tile.jpg", "rb");
-	//fseek(jpegFile, 0, SEEK_END);
-	//long size = ftell(jpegFile);
-	//fseek(jpegFile, 0, SEEK_SET);
-	//fprintf(g_log, "jpeg file size is %i\n", size);
-
-	//unsigned char* buffer = (unsigned char*)malloc(size);
-	//fread(buffer, size, 1, jpegFile);
-	//fclose(jpegFile);
-
-	//tjhandle decomp = tjInit Decompress();
-	//int width, height, subsamp;
-	//tjDecompressHeader2(decomp, buffer, size, &width, &height, &subsamp);
-	//fprintf(g_log, "w %i h %i\n", width, height);
-	////tjDecompress2
-	//tjDestroy(decomp);
 
 	//objl::Loader loader;
 	//std::string objfile = "";
