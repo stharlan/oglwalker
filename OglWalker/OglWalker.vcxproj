@@ -149,6 +149,7 @@
     <ClInclude Include="I3DObject.h" />
     <ClInclude Include="obj_loader.h" />
     <ClInclude Include="OglWalker.h" />
+    <ClInclude Include="OpenGLExtensions.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -159,6 +160,7 @@
     <ClCompile Include="GeometryOperations.cpp" />
     <ClCompile Include="I3DObject.cpp" />
     <ClCompile Include="OglWalker.cpp" />
+    <ClCompile Include="OpenGLExtensions.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

@@ -379,8 +379,6 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	}
 	*/
 
-	AddSomeStuff(AllTris, GSpatialIndex);
-
 	float EyeAzimuthInDegrees = 0.0f;
 	float EyeElevationInDegrees = 0.0f;
 	float px = 0.0f;
@@ -392,6 +390,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	float movementInTheY = 0.0f;
 	float movementInTheZ = 0.0f;
 	float proposedMovementInTheY = 0.0f;
+	GLuint VectorBuffer;
 
 	FILE* log = NULL;
 	fopen_s(&log, "c:\\temp\\rt.log", "w");
@@ -408,6 +407,11 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	ChangeSize(rect.right, rect.bottom);
 
 	SetupRC();
+
+	glext::InitializeExtensions();
+	AddSomeStuff(AllTris, GSpatialIndex);
+
+	glext::glGenBuffers(1, &VectorBuffer);
 
 	LARGE_INTEGER perfCount;
 	LARGE_INTEGER perfFreq;
@@ -729,6 +733,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		// present to screen
 		SwapBuffers(hdc);
 	}
+
+	glext::glDeleteBuffers(1, &VectorBuffer);
 
 	fprintf(log, "destroy rc stuff\n");
 	FontDestroy(pFont);
