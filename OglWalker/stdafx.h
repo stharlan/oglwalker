@@ -36,6 +36,8 @@
 #include <glm/vec3.hpp>
 #include <glm/geometric.hpp>
 
+#include <turbojpeg.h>
+
 #include "I3DObject.h"
 //#include "Point.h"
 #include "Triangle.h"
