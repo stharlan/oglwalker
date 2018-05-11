@@ -131,13 +131,15 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Library\boost_1_67_0;C:\Library\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\boost_1_67_0;C:\Library\glm;C:\Library\glew-2.1.0\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>dxguid.lib;dinput8.lib;glu32.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -149,7 +151,6 @@
     <ClInclude Include="I3DObject.h" />
     <ClInclude Include="obj_loader.h" />
     <ClInclude Include="OglWalker.h" />
-    <ClInclude Include="OpenGLExtensions.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -160,7 +161,6 @@
     <ClCompile Include="GeometryOperations.cpp" />
     <ClCompile Include="I3DObject.cpp" />
     <ClCompile Include="OglWalker.cpp" />
-    <ClCompile Include="OpenGLExtensions.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

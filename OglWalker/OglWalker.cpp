@@ -4,6 +4,8 @@
 #include "stdafx.h"
 #include "OglWalker.h"
 
+#pragma comment(lib, "C:\\Library\\glew-2.1.0\\vs2017\\glew\\x64\\Release\\glew.lib")
+
 #define MAX_LOADSTRING 100
 #define PI 3.14159f
 #define DEG2RAD(x) (x * PI / 180.0f)
@@ -84,8 +86,6 @@ void SetupRC()
 	//glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientLight);
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
-
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void SetPerspective(int w, int h)
@@ -331,6 +331,28 @@ void ProcessFloor(glm::vec3& p) {
 	}
 }
 
+GLuint CreateGlVertexBuffer(std::vector<oglw::Triangle>& AllTris)
+{
+	GLuint VectorBufferId = 0;
+
+	glm::vec3* verts = (glm::vec3*)malloc(AllTris.size() * 3 * sizeof(glm::vec3));
+
+	unsigned int ctr = 0;
+	for (std::vector<oglw::Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter) {
+		verts[ctr++] = iter->p1;
+		verts[ctr++] = iter->p2;
+		verts[ctr++] = iter->p3;
+	}
+
+	glGenBuffers(1, &VectorBufferId);
+	glBindBuffer(GL_ARRAY_BUFFER, VectorBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+	free(verts);
+
+	return VectorBufferId;
+}
+
 DWORD WINAPI RenderingThreadEntryPoint(void* pVoid) 
 {
 	RENDER_THREAD_CONTEXT* ctx = (RENDER_THREAD_CONTEXT*)pVoid;
@@ -339,45 +361,6 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	boost::geometry::index::rtree< GValueModel, boost::geometry::index::quadratic<16> > GSpatialIndex;
 
 	std::vector<oglw::Triangle> AllTris;
-
-	// add a floor
-	/*
-	for (float x = -50.0f; x < 50.0f; x += 5.0f) {
-		for (float z = -50.0f; z < 50.0f; z += 5.0f) {
-
-			float height = 0;
-
-			Point p1(x, height, z);
-			Point p2(x + 5.0f, height, z + 5.0f);
-			Point p3(x + 5.0f, height, z);
-			ProcessFloor(p1);
-			ProcessFloor(p2);
-			ProcessFloor(p3);
-			Triangle t1(p1, p2, p3);
-			Point p1min = t1.MinBox();
-			Point p1max = t1.MaxBox();
-			AllTris.push_back(t1);
-
-			box b1{ {p1min.x, p1min.y, p1min.z},{p1max.x, p1max.y, p1max.z} };
-			rtree.insert(std::make_pair(b1, (unsigned)(AllTris.size() - 1)));
-
-			Point p4(x, height, z);
-			Point p5(x, height, z + 5.0f);
-			Point p6(x + 5.0f, height, z + 5.0f);
-			ProcessFloor(p4);
-			ProcessFloor(p5);
-			ProcessFloor(p6);
-			Triangle t2(p4, p5, p6);
-			Point p2min = t2.MinBox();
-			Point p2max = t2.MaxBox();
-			AllTris.push_back(t2);
-
-			box b2{ { p2min.x, p2min.y, p2min.z },{ p2max.x, p2max.y, p2max.z } };
-			rtree.insert(std::make_pair(b2, (unsigned)(AllTris.size() - 1)));
-
-		}
-	}
-	*/
 
 	float EyeAzimuthInDegrees = 0.0f;
 	float EyeElevationInDegrees = 0.0f;
@@ -390,7 +373,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	float movementInTheY = 0.0f;
 	float movementInTheZ = 0.0f;
 	float proposedMovementInTheY = 0.0f;
-	GLuint VectorBuffer;
+	GLuint VectorBufferId;
 
 	FILE* log = NULL;
 	fopen_s(&log, "c:\\temp\\rt.log", "w");
@@ -406,12 +389,14 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	GetClientRect(ctx->hWnd, &rect);
 	ChangeSize(rect.right, rect.bottom);
 
-	SetupRC();
+	GLenum res = glewInit();
 
-	glext::InitializeExtensions();
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
 	AddSomeStuff(AllTris, GSpatialIndex);
+	VectorBufferId = CreateGlVertexBuffer(AllTris);
 
-	glext::glGenBuffers(1, &VectorBuffer);
+	SetupRC();
 
 	LARGE_INTEGER perfCount;
 	LARGE_INTEGER perfFreq;
@@ -734,7 +719,7 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		SwapBuffers(hdc);
 	}
 
-	glext::glDeleteBuffers(1, &VectorBuffer);
+	glDeleteBuffers(1, &VectorBufferId);
 
 	fprintf(log, "destroy rc stuff\n");
 	FontDestroy(pFont);

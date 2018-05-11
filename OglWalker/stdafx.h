@@ -7,6 +7,7 @@
 
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#define GLEW_STATIC
 
 // Windows Header Files:
 #include <windows.h>
@@ -19,6 +20,7 @@
 
 
 // TODO: reference additional headers your program requires here
+#include <GL/glew.h>
 #include <gl/GL.h>
 #include <gl/GLU.h>
 #include <stdio.h>
@@ -37,11 +39,6 @@
 #include <glm/geometric.hpp>
 
 #include "I3DObject.h"
-//#include "Point.h"
 #include "Triangle.h"
 #include "CubeObject.h"
 #include "GeometryOperations.h"
-
-#include "obj_loader.h"
-
-#include "OpenGLExtensions.h"
