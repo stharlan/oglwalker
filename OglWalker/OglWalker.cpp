@@ -57,12 +57,12 @@ bool ReadKeyboardState(unsigned char* keystate);
 
 HANDLE hRenderingThread = NULL;
 DWORD RenderThreadId = 0;
-GLFONT* pFont;
+//GLFONT* pFont;
 FILE* g_log;
 
 void SetupRC()
 {
-	pFont = FontCreate(wglGetCurrentDC(), L"Arial", 18, 0, 0);
+	//pFont = FontCreate(wglGetCurrentDC(), L"Arial", 18, 0, 0);
 
 	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -107,116 +107,6 @@ void SetOrtho(int w, int h)
 	glOrtho(0.0, (GLfloat)w, 0.0, (GLfloat)h, -1.0, 1.0);
 	glMatrixMode(GL_MODELVIEW);
 }
-
-/*
-void RenderScene(int w, int h, float fps, float azimuth, float elevation,
-	float px, float py, float pz, float ex, float ez, std::vector<Triangle> &AllTris,
-	int u1, unsigned int u3,
-	Point& lpt, unsigned int u5)
-//void RenderScene(int w, int h, float fps, float azimuth, float elevation, float px, float pz)
-{
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	SetPerspective(w, h);
-	
-	// create a grid of triangles as a "floor"
-	glPushMatrix();
-	{
-		glLoadIdentity();
-
-		// direction look l/r
-		glRotatef(azimuth, 0.0f, 1.0f, 0.0);
-
-		float erad = DEG2RAD(azimuth);
-		GLfloat eex = cosf(erad);
-		GLfloat eez = sinf(erad);
-
-		// elevation look u/d
-		glRotatef(elevation, eex, 0.0f, eez);
-
-		// position x/y
-		glTranslatef(px, -1.0f * py, pz);
-
-		// draw the grid (white)
-		glColor3f(1.0f, 1.0f, 1.0f);
-		glPolygonMode(GL_FRONT, GL_LINE);
-		glBegin(GL_TRIANGLES);
-		{
-			glLineWidth(1.0f);
-			for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
-				iter->Draw();
-		}
-		glEnd();
-
-		// draw some red triangles
-		glColor3f(1.0f, 0.0f, 0.0f);
-		glPolygonMode(GL_FRONT, GL_FILL);
-		glBegin(GL_TRIANGLES);
-		{
-			unsigned int ctr = 0;
-			for (std::vector<Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
-			{
-				if (ctr == u3 || ctr == u5) iter->Draw();
-				ctr++;
-			}
-		}
-		glEnd();
-		glBegin(GL_POINTS);
-		glVertex3f(lpt.x, lpt.y, lpt.z);
-		glEnd();
-
-		// set back to white lines
-		glColor3f(1.0f, 1.0f, 1.0f);
-		glPolygonMode(GL_FRONT, GL_LINE);
-
-		// draw a sphere
-		glPushMatrix();
-		{
-			glTranslatef(-10.0f, 10.0f, -10.0f);
-			GLUquadric* pquad = gluNewQuadric();
-			gluSphere(pquad, 5, 10, 10);
-			gluDeleteQuadric(pquad);
-		}
-		glPopMatrix();
-
-	}
-	glPopMatrix();
-
-	// create a "crosshair" in the middle of the screen
-	SetOrtho(w, h); 
-	glColor3f(0.0f, 1.0f, 0.0f);
-	glLineWidth(1.0f);
-	glBegin(GL_LINES);
-	{
-		glVertex2i((w / 2) - 10, h / 2);
-		glVertex2i((w / 2) + 10, h / 2);
-		glVertex2i(w / 2, (h / 2) - 10);
-		glVertex2i(w / 2, (h / 2) + 10);
-	}
-	glEnd();
-
-	// draw some text on the screen
-	// debugging messages - for now
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glRasterPos2i(4, 18);
-	FontPrintf(pFont, 1, "hello world %i", (int)fps);
-
-	SYSTEMTIME stime;
-	GetSystemTime(&stime);
-	glRasterPos2i(4, 36);
-	FontPrintf(pFont, 1, "%02i:%02i:%02i\n", stime.wHour, stime.wMinute, stime.wSecond);
-
-	glRasterPos2i((w / 2) + 10, (h / 2) + 10);
-	FontPrintf(pFont, 1, "%.0f degrees", azimuth);
-
-	glRasterPos2i((w / 2) + 10, (h / 2) + 24);
-	FontPrintf(pFont, 1, "%.4f, %.4f, pct %i", ex, ez, u1);
-
-	glFinish();
-
-}
-*/
 
 void AddCubeTris(CubeObject& c1,
 	std::vector<oglw::Triangle>& AllTris,
@@ -331,26 +221,109 @@ void ProcessFloor(glm::vec3& p) {
 	}
 }
 
-GLuint CreateGlVertexBuffer(std::vector<oglw::Triangle>& AllTris)
+void CreateGlBuffers(std::vector<oglw::Triangle>& AllTris, GLuint BufferIds[2])
 {
-	GLuint VectorBufferId = 0;
+	BufferIds[0] = 0;
+	BufferIds[1] = 0;
 
 	glm::vec3* verts = (glm::vec3*)malloc(AllTris.size() * 3 * sizeof(glm::vec3));
+	glm::uvec3* idxs = (glm::uvec3*)malloc(AllTris.size() * sizeof(glm::uvec3));
 
 	unsigned int ctr = 0;
 	for (std::vector<oglw::Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter) {
 		verts[ctr++] = iter->p1;
 		verts[ctr++] = iter->p2;
 		verts[ctr++] = iter->p3;
+		glm::uvec3 ti(ctr - 3, ctr - 2, ctr - 1);
+		idxs[(ctr / 3) - 1] = ti;
 	}
 
-	glGenBuffers(1, &VectorBufferId);
-	glBindBuffer(GL_ARRAY_BUFFER, VectorBufferId);
+	glGenBuffers(2, &BufferIds[0]);
+
+	glBindBuffer(GL_ARRAY_BUFFER, BufferIds[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
 
-	free(verts);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BufferIds[1]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idxs), idxs, GL_STATIC_DRAW);
 
-	return VectorBufferId;
+	free(verts);
+	free(idxs);
+}
+
+static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType)
+{
+	GLuint ShaderObj = glCreateShader(ShaderType);
+
+	if (ShaderObj == 0) {
+		fprintf(g_log, "Error creating shader type %d\n", ShaderType);
+		exit(1);
+	}
+
+	const GLchar* p[1];
+	p[0] = pShaderText;
+	GLint Lengths[1];
+	Lengths[0] = (GLint)strlen(pShaderText);
+	glShaderSource(ShaderObj, 1, p, Lengths);
+	glCompileShader(ShaderObj);
+	GLint success;
+	glGetShaderiv(ShaderObj, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		GLchar InfoLog[1024];
+		glGetShaderInfoLog(ShaderObj, 1024, NULL, InfoLog);
+		fprintf(g_log, "Error compiling shader type %d: '%s'\n", ShaderType, InfoLog);
+		exit(1);
+	}
+
+	glAttachShader(ShaderProgram, ShaderObj);
+}
+
+GLuint CreateShaders()
+{
+	GLuint ShaderProgram = glCreateProgram();
+
+	const char* vs = "#version 330\r\n"
+		"layout(location = 0) in vec3 Position;\r\n"
+		"uniform mat4 gWorld;\r\n"
+		"out vec4 Color;\r\n"
+		"void main() {\r\n"
+		"gl_Position = gWorld * vec4(Position, 1.0);\r\n"
+		"Color = vec4(clamp(Position, 0.0, 1.0), 1.0);\r\n"
+		"}";
+
+	const char* fs = "#version 330\r\n"
+		"in vec4 Color;\r\n"
+		"out vec4 FragColor;\r\n"
+		"void main()\r\n"
+		"{ FragColor = Color; }";
+
+	AddShader(ShaderProgram, vs, GL_VERTEX_SHADER);
+	AddShader(ShaderProgram, fs, GL_FRAGMENT_SHADER);
+
+	GLint Success = 0;
+	GLchar ErrorLog[1024] = { 0 };
+
+	glLinkProgram(ShaderProgram);
+	glGetProgramiv(ShaderProgram, GL_LINK_STATUS, &Success);
+	if (Success == 0) {
+		glGetProgramInfoLog(ShaderProgram, sizeof(ErrorLog), NULL, ErrorLog);
+		fprintf(g_log, "Error linking shader program: '%s'\n", ErrorLog);
+		exit(1);
+	}
+
+	glValidateProgram(ShaderProgram);
+	glGetProgramiv(ShaderProgram, GL_VALIDATE_STATUS, &Success);
+	if (!Success) {
+		glGetProgramInfoLog(ShaderProgram, sizeof(ErrorLog), NULL, ErrorLog);
+		fprintf(g_log, "Invalid shader program: '%s'\n", ErrorLog);
+		exit(1);
+	}
+
+	glUseProgram(ShaderProgram);
+
+	GLuint gWorldLocation = glGetUniformLocation(ShaderProgram, "gWorld");
+	assert(gWorldLocation != 0xFFFFFFFF);
+
+	return gWorldLocation;
 }
 
 DWORD WINAPI RenderingThreadEntryPoint(void* pVoid) 
@@ -373,7 +346,8 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	float movementInTheY = 0.0f;
 	float movementInTheZ = 0.0f;
 	float proposedMovementInTheY = 0.0f;
-	GLuint VectorBufferId;
+	GLuint BufferIds[2];
+	GLuint WorldLocation = 0;
 
 	FILE* log = NULL;
 	fopen_s(&log, "c:\\temp\\rt.log", "w");
@@ -394,9 +368,11 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	AddSomeStuff(AllTris, GSpatialIndex);
-	VectorBufferId = CreateGlVertexBuffer(AllTris);
+	CreateGlBuffers(AllTris, &BufferIds[0]);
 
-	SetupRC();
+	WorldLocation = CreateShaders();
+
+	//SetupRC();
 
 	LARGE_INTEGER perfCount;
 	LARGE_INTEGER perfFreq;
@@ -594,11 +570,19 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		unsigned int triangleLookingAt = FindClosestTriThatIntersectsLine(
 			GSpatialIndex, los2, AllTris, originEye, oppRay, pout, NULL);
 
-		// RENDER SCENE BEGIN
-
 		// clear stuff
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// RENDER SCENE BEGIN2
+
+		//gluPerspective(60.0f, fAspect, 1.0, 400.0);
+		glm::mat4x4 w = glm::perspective(60.0f, (float)rect.right / (float)rect.bottom, 1.0f, 400.0f);
+		glUniformMatrix4fv(WorldLocation, 1, GL_TRUE, (const GLfloat*)&w);
+
+		// RENDER SCENE END2
+
+		// RENDER SCENE BEGIN
+		/*
 		// set a perspective matrix
 		SetPerspective(rect.right, rect.bottom);
 
@@ -632,19 +616,17 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 			glEnd();
 
 			// draw some red triangles
-			/*
-			glColor3f(1.0f, 0.0f, 0.0f);
-			glBegin(GL_TRIANGLES);
-			{
-				unsigned int ctr = 0;
-				for (std::vector<oglw::Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
-				{
-					if (ctr == triangleBelow || ctr == triangleLookingAt) iter->Draw();
-					ctr++;
-				}
-			}
-			glEnd();
-			*/
+			////glColor3f(1.0f, 0.0f, 0.0f);
+			////glBegin(GL_TRIANGLES);
+			////{
+			////	unsigned int ctr = 0;
+			////	for (std::vector<oglw::Triangle>::iterator iter = AllTris.begin(); iter != AllTris.end(); ++iter)
+			////	{
+			////		if (ctr == triangleBelow || ctr == triangleLookingAt) iter->Draw();
+			////		ctr++;
+			////	}
+			////}
+			////glEnd();
 
 			//glBegin(GL_POINTS);
 			//glVertex3f(farpt.x, farpt.y, farpt.z);
@@ -694,14 +676,14 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 
 		// draw some text on the screen
 		// debugging messages - for now
-		glColor3f(1.0f, 1.0f, 1.0f);
-		glRasterPos2i(4, 18);
-		FontPrintf(pFont, 1, "fps %i", (int)FramesPerSecond);
+		//glColor3f(1.0f, 1.0f, 1.0f);
+		//glRasterPos2i(4, 18);
+		//FontPrintf(pFont, 1, "fps %i", (int)FramesPerSecond);
 
-		SYSTEMTIME stime;
-		GetSystemTime(&stime);
-		glRasterPos2i(4, 36);
-		FontPrintf(pFont, 1, "%02i:%02i:%02i\n", stime.wHour, stime.wMinute, stime.wSecond);
+		//SYSTEMTIME stime;
+		//GetSystemTime(&stime);
+		//glRasterPos2i(4, 36);
+		//FontPrintf(pFont, 1, "%02i:%02i:%02i\n", stime.wHour, stime.wMinute, stime.wSecond);
 
 		glRasterPos2i((rect.right / 2) + 10, (rect.bottom / 2) + 10);
 		//FontPrintf(pFont, 1, "%.0f degrees", EyeAzimuthInDegrees);
@@ -713,16 +695,17 @@ DWORD WINAPI RenderingThreadEntryPoint(void* pVoid)
 		// finish it all
 		glFinish();
 
+		*/
 		// RENDER SCENE END
 
 		// present to screen
 		SwapBuffers(hdc);
 	}
 
-	glDeleteBuffers(1, &VectorBufferId);
+	glDeleteBuffers(2, &BufferIds[0]);
 
 	fprintf(log, "destroy rc stuff\n");
-	FontDestroy(pFont);
+	//FontDestroy(pFont);
 	wglMakeCurrent(hdc, NULL);
 	wglDeleteContext(hrc);
 
