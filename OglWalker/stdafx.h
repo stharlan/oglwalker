@@ -8,9 +8,16 @@
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 #define GLEW_STATIC
+#define MAX_LOADSTRING 100
+#define PI 3.14159f
+#define DEG2RAD(x) (x * PI / 180.0f)
+#define NO_TRIANGLE_FOUND UINT_MAX
+#define GLM_ENABLE_EXPERIMENTAL
 
 // Windows Header Files:
 #include <windows.h>
+
+#define CUSTOM_QUIT (WM_USER + 1)
 
 // C RunTime Header Files
 #include <stdlib.h>
@@ -39,6 +46,10 @@
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
+
+#include "RenderThreadCommon.h"
+#include "RenderThread.h"
 
 #include "I3DObject.h"
 #include "Triangle.h"
