@@ -12,7 +12,8 @@ const char* vs =
 "out vec4 Color;\r\n"
 "void main()\r\n"
 "{ gl_Position = gWorld * vec4(Position, 1.0);"
-"Color = vec4(clamp(Position, 0.0, 1.0), 1.0); }";
+"Color = vec4(1.0, 0.0, 0.0, 1.0); }";
+//"Color = vec4(clamp(Position, 0.0, 1.0), 1.0); }";
 
 const char* fs = 
 "#version 330\r\n"
@@ -23,12 +24,15 @@ const char* fs =
 
 static void CreateVertexBuffer()
 {
-	glm::vec3 Vertices[4];
-	Vertices[0] = glm::vec3(-1.0f, -1.0f, 0.0f);
-	Vertices[1] = glm::vec3(0.0f, -1.0f, 1.0f);
-	Vertices[2] = glm::vec3(1.0f, -1.0f, 0.0f);
-	Vertices[3] = glm::vec3(0.0f, 1.0f, 0.0f);
-
+	glm::vec3 Vertices[7];
+	Vertices[0] = glm::vec3(0, 0, 0);
+	Vertices[1] = glm::vec3(1, 0, 0);
+	Vertices[2] = glm::vec3(0, 1, 0);
+	Vertices[3] = glm::vec3(-25, 0, -25);
+	Vertices[4] = glm::vec3(25, 0, -25);
+	Vertices[5] = glm::vec3(25, 0, 0);
+	Vertices[6] = glm::vec3(-25, 0, 0);
+	
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertices), Vertices, GL_STATIC_DRAW);
@@ -36,10 +40,11 @@ static void CreateVertexBuffer()
 
 static void CreateIndexBuffer()
 {
-	unsigned int Indices[] = { 0, 3, 1,
-		1, 3, 2,
-		2, 3, 0,
-		0, 1, 2 };
+	unsigned int Indices[] = { 
+		0, 1, 1, 2, 2, 0,
+		3, 4, 4, 6, 6, 3,
+		4, 5, 5, 6, 6, 4
+	};
 
 	glGenBuffers(1, &IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
@@ -94,6 +99,11 @@ DWORD WINAPI RenderingThreadTwoEntryPoint(void* pVoid)
 	LARGE_INTEGER perfFreq;
 	LONGLONG lastCount = 0;
 	FILE* log = NULL;
+	RECT rect;
+	float ex = 0.0f, ez = 0.0f;
+	float azimuth = 180.0f;
+
+	GetClientRect(ctx->hWnd, &rect);
 
 	fopen_s(&log, "c:\\temp\\rt.log", "w");
 
@@ -126,13 +136,17 @@ DWORD WINAPI RenderingThreadTwoEntryPoint(void* pVoid)
 		if (TRUE == ctx->useDI) {
 			if (TRUE == ReadMouseState(&mouseState))
 			{
-
+				azimuth -= (mouseState.lX / 8.0f);
 			}
 			if (TRUE == ReadKeyboardState(&keystate[0]))
 			{
 				if (keystate[DIK_ESCAPE] == (unsigned char)128) {
 					PostMessage(ctx->hWnd, CUSTOM_QUIT, 0, 0);
 				}
+				if (keystate[DIK_W] == (unsigned char)128) ez -= 0.001f;
+				if (keystate[DIK_S] == (unsigned char)128) ez += 0.001f;
+				if (keystate[DIK_A] == (unsigned char)128) ex -= 0.001f;
+				if (keystate[DIK_D] == (unsigned char)128) ex += 0.001f;
 			}
 		}
 
@@ -140,42 +154,32 @@ DWORD WINAPI RenderingThreadTwoEntryPoint(void* pVoid)
 		{
 			glClear(GL_COLOR_BUFFER_BIT);
 
-			//static float ngl = 0.0f;
+			glm::mat4 projmat;
+			glm::mat4 modelmat;
+			glm::mat4 ModelViewProjectionMatrix;
 
-			//ngl += 0.001f;
+			projmat = glm::mat4(1.0);
+			projmat *= glm::perspective(45.0f, (float)rect.right / (float)rect.bottom, 0.1f, 400.0f);
 
-			//// scale is in radians
-			//glm::mat4x4 World = glm::scale(glm::vec3(sin(ngl), sin(ngl), sin(ngl)));
+			modelmat = glm::mat4(1.0);
+			// eye, center, up
+			float azimuth_in_radians = DEG2RAD(azimuth);
+			modelmat *= glm::lookAt(
+				glm::vec3(ex, 6.0f, ez), // eye, my eye position
+				glm::vec3(ex + sinf(azimuth_in_radians), 6.0f, ez + cosf(azimuth_in_radians)),
+				glm::vec3(0.0f, 1.0f, 0.0f)); // up vector
 
-			//glUniformMatrix4fv(gWorldLocation, 1, GL_TRUE, &World[0][0]);
+			ModelViewProjectionMatrix = projmat * modelmat;
 
-			//glEnableVertexAttribArray(0);
-			//glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-			//glDrawArrays(GL_TRIANGLES, 0, 3);
-
-			//glDisableVertexAttribArray(0);
-
-			static float Scale = 0.0f;
-
-			Scale += 0.001f;
-
-			glm::mat4x4 World;
-
-			World[0][0] = cosf(Scale); World[0][1] = 0.0f; World[0][2] = -sinf(Scale); World[0][3] = 0.0f;
-			World[1][0] = 0.0;         World[1][1] = 1.0f; World[1][2] = 0.0f; World[1][3] = 0.0f;
-			World[2][0] = sinf(Scale); World[2][1] = 0.0f; World[2][2] = cosf(Scale); World[2][3] = 0.0f;
-			World[3][0] = 0.0f;        World[3][1] = 0.0f; World[3][2] = 0.0f; World[3][3] = 1.0f;
-
-			glUniformMatrix4fv(gWorldLocation, 1, GL_TRUE, &World[0][0]);
+			glUniformMatrix4fv(gWorldLocation, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 
 			glEnableVertexAttribArray(0);
 			glBindBuffer(GL_ARRAY_BUFFER, VBO);
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 
-			glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+			//glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+			glDrawElements(GL_LINES, 18, GL_UNSIGNED_INT, 0);
 
 			glDisableVertexAttribArray(0);
 
