@@ -1,6 +1,9 @@
 
 #include "stdafx.h"
 
+#pragma comment(lib, "CORE_RL_Magick++_.lib")
+#pragma comment(lib, "CORE_RL_MagickCore_.lib")
+
 GLuint VBO;
 GLuint IBO;
 GLuint gWorldLocation;
@@ -89,6 +92,31 @@ static void CompileShaders()
 
 }
 
+bool TextureLoad(const char* m_fileName, GLenum m_textureTarget, GLuint* lpm_textureObj)
+{
+	Magick::Image m_image;
+	//mImage.read("c:\\temp\\black_tile.jpg");
+	Magick::Blob m_blob;
+	//mImage.write(&mBlob, "RGBA");
+
+	try {
+		m_image.read(m_fileName);
+		m_image.write(&m_blob, "RGBA");
+	}
+	catch (Magick::Error& Error) {
+		return false;
+	}
+
+	glGenTextures(1, lpm_textureObj);
+	glBindTexture(m_textureTarget, *lpm_textureObj);
+	glTexImage2D(m_textureTarget, 0, GL_RGBA, m_image.columns(), m_image.rows(), 0, GL_RGBA, GL_UNSIGNED_BYTE, m_blob.data());
+	glTexParameterf(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(m_textureTarget, 0);
+
+	return true;
+}
+
 DWORD WINAPI RenderingThreadTwoEntryPoint(void* pVoid)
 {
 
@@ -102,6 +130,7 @@ DWORD WINAPI RenderingThreadTwoEntryPoint(void* pVoid)
 	RECT rect;
 	float ex = 0.0f, ez = 0.0f;
 	float azimuth = 180.0f;
+	GLuint Texture1;
 
 	GetClientRect(ctx->hWnd, &rect);
 
@@ -122,6 +151,8 @@ DWORD WINAPI RenderingThreadTwoEntryPoint(void* pVoid)
 	CreateIndexBuffer();
 
 	CompileShaders();
+
+	TextureLoad("c:\\temp\\black_tile.jpg", GL_TEXTURE_2D, &Texture1);
 
 	while (1) {
 

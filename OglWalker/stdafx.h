@@ -27,26 +27,31 @@
 
 
 // TODO: reference additional headers your program requires here
-#include <GL/glew.h>
-#include <gl/GL.h>
-#include <gl/GLU.h>
 #include <stdio.h>
 #include <math.h>
 #include <dinput.h>
 #include <float.h>
 #include <vector>
 
+// opengl
+#include <GL/glew.h>
+#include <gl/GL.h>
+#include <gl/GLU.h>
+
+// for rtree index
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/geometries/box.hpp>
-
 #include <boost/geometry/index/rtree.hpp>
 
+// vectors and matrices
 #include <glm/vec3.hpp>
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
+
+#include <Magick++.h>
 
 #include "RenderThreadCommon.h"
 #include "RenderThread.h"
