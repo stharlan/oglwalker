@@ -53,6 +53,8 @@
 
 #include <Magick++.h>
 
+#include <rapidjson/document.h>
+
 #include "RenderThreadCommon.h"
 #include "RenderThread.h"
 

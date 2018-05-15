@@ -131,7 +131,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Library\boost_1_67_0;C:\Library\glm;C:\Library\glew-2.1.0\include;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\boost_1_67_0;C:\Library\glm;C:\Library\glew-2.1.0\include;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\rapidjson\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -164,6 +164,7 @@
     <ClCompile Include="OglWalker.cpp" />
     <ClCompile Include="RenderThreadCommon.cpp" />
     <ClCompile Include="RenderThreadOne.cpp" />
+    <ClCompile Include="RenderThreadThree.cpp" />
     <ClCompile Include="RenderThreadTwo.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -5,6 +5,8 @@
 #include "OglWalker.h"
 
 #pragma comment(lib, "C:\\Library\\glew-2.1.0\\vs2017\\glew\\x64\\Release\\glew.lib")
+#pragma comment(lib, "CORE_RL_Magick++_.lib")
+#pragma comment(lib, "CORE_RL_MagickCore_.lib")
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -212,6 +214,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				ShowCursor(FALSE);
 			}
 			g_ctx.useDI = useDI;
+			g_ctx.InputFilename = "c:\\temp\\objects.json";
 			hRenderingThread = (HANDLE)CreateThread(NULL, 0, RenderingThreadTwoEntryPoint, (LPVOID)&g_ctx, 0, &RenderThreadId);
 		}
 		break;

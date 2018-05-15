@@ -121,3 +121,76 @@ void SetOrtho(int w, int h)
 	glOrtho(0.0, (GLfloat)w, 0.0, (GLfloat)h, -1.0, 1.0);
 	glMatrixMode(GL_MODELVIEW);
 }
+
+char* CommonReadFile(const char* filename)
+{
+	FILE *fin = NULL;
+	fopen_s(&fin, "c:\\temp\\objects.json", "r");
+	fseek(fin, 0, SEEK_END);
+	unsigned int flen = ftell(fin);
+	fseek(fin, 0, SEEK_SET);
+	char* content = (char*)malloc(flen + 1);
+	ZeroMemory(content, flen + 1);
+	fread_s(content, flen + 1, flen, 1, fin);
+	fclose(fin);
+	return content;
+}
+
+bool TextureLoad(const char* m_fileName, GLenum m_textureTarget, GLuint TextureObjectId)
+{
+	Magick::Image m_image;
+	Magick::Blob m_blob;
+
+	try {
+		m_image.read(m_fileName);
+		m_image.write(&m_blob, "RGBA");
+	}
+	catch (Magick::Error& Error) {
+		return false;
+	}
+
+	//glGenTextures(1, lpm_textureObj);
+	glBindTexture(m_textureTarget, TextureObjectId);
+	glTexImage2D(m_textureTarget, 0, GL_RGBA, (GLsizei)m_image.columns(), (GLsizei)m_image.rows(), 0, GL_RGBA, GL_UNSIGNED_BYTE, m_blob.data());
+	glTexParameterf(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(m_textureTarget, 0);
+
+	return true;
+}
+
+GLuint CompileShaders(GLuint* gWorldLocation, GLuint* gSampler, const char* vs1, const char* fs1)
+{
+	GLuint ShaderProgram = glCreateProgram();
+
+	if (ShaderProgram == 0) {
+		fprintf(stderr, "Error creating shader program\n");
+		exit(1);
+	}
+
+	AddShader(ShaderProgram, vs1, GL_VERTEX_SHADER);
+	AddShader(ShaderProgram, fs1, GL_FRAGMENT_SHADER);
+
+	GLint Success = 0;
+	GLchar ErrorLog[1024] = { 0 };
+
+	glLinkProgram(ShaderProgram);
+	glGetProgramiv(ShaderProgram, GL_LINK_STATUS, &Success);
+	if (Success == 0) {
+		glGetProgramInfoLog(ShaderProgram, sizeof(ErrorLog), NULL, ErrorLog);
+		fprintf(stderr, "Error linking shader program: '%s'\n", ErrorLog);
+		exit(1);
+	}
+
+	glValidateProgram(ShaderProgram);
+	glGetProgramiv(ShaderProgram, GL_VALIDATE_STATUS, &Success);
+	if (!Success) {
+		glGetProgramInfoLog(ShaderProgram, sizeof(ErrorLog), NULL, ErrorLog);
+		fprintf(stderr, "Invalid shader program: '%s'\n", ErrorLog);
+		exit(1);
+	}
+
+	glUseProgram(ShaderProgram);
+
+	return ShaderProgram;
+}
