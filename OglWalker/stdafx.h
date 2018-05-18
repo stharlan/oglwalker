@@ -32,6 +32,7 @@
 #include <dinput.h>
 #include <float.h>
 #include <vector>
+#include <iostream>
 
 // opengl
 #include <GL/glew.h>

@@ -92,7 +92,7 @@ void SetupRC()
 }
 
 
-GLuint CreateShaders()
+GLuint CreateShaders(FILE* log)
 {
 	GLuint ShaderProgram = glCreateProgram();
 
@@ -111,8 +111,8 @@ GLuint CreateShaders()
 		"void main()\r\n"
 		"{ FragColor = Color; }";
 
-	AddShader(ShaderProgram, vs, GL_VERTEX_SHADER);
-	AddShader(ShaderProgram, fs, GL_FRAGMENT_SHADER);
+	AddShader(ShaderProgram, vs, GL_VERTEX_SHADER, log);
+	AddShader(ShaderProgram, fs, GL_FRAGMENT_SHADER, log);
 
 	GLint Success = 0;
 	GLchar ErrorLog[1024] = { 0 };
@@ -255,7 +255,7 @@ DWORD WINAPI RenderingThreadOneEntryPoint(void* pVoid)
 	AddSomeStuff(AllTris, GSpatialIndex);
 	CreateGlBuffers(AllTris, &BufferIds[0]);
 
-	WorldLocation = CreateShaders();
+	WorldLocation = CreateShaders(log);
 
 	SetupRC();
 

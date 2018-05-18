@@ -57,32 +57,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ int       nCmdShow)
 {
 
+	AllocConsole();
+	FILE *cf;
+	freopen_s(&cf, "CONOUT$", "w", stdout);
+
 	fopen_s(&g_log, "c:\\temp\\ow.log", "w");
+	fprintf(g_log, "ready\n");
 
-	//objl::Loader loader;
-	//std::string objfile = "";
-	//bool bRet = loader.LoadFile(objfile);
-
-	//Point origin(0, 0, 0);
-	//Point ray(0, -1, 0);
-	//Triangle t(Point(0, -2, 1), Point(1, -2, -1), Point(-1, -2, -1));
-	//Point result;
-	//bool b = RayIntersectsTriangle(origin, ray, t, result);
-	//fprintf(g_log, "%i %.1f %.1f %.1f\n", b, result.x, result.y, result.z);
-
-	//Point a(5, 1, 0);
-	//Point b(-1, 0, 0);
-	//float adotb = a.dotProduct(b);
-	//float bdotb = b.dotProduct(b);
-	//Point rp = b * (adotb / bdotb);
-	//fprintf(g_log, "proj %.1f, %.1f, %.1f\n", rp.x, rp.y, rp.z);
-
-	//Point p1(0, 0, 0);
-	//Point p2(1, 0, 0);
-	//Point p3(1, 1, 0);
-	//Triangle t(p1, p2, p3);
-	//Point nv = t.SurfaceNormal();
-	//fprintf(g_log, "nv %.1f, %.1f, %.1f\n", nv.x, nv.y, nv.z);
+	printf("ready\n");
 
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
@@ -95,9 +77,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
+	printf("init'ing instance\n");
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
 	if(hWnd == NULL)
     {
+		printf("failed to init instance\n");
+		fclose(g_log);
+		FreeConsole();
         return FALSE;
     }
 
@@ -115,7 +101,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
+	system("pause");
 	fclose(g_log);
+	FreeConsole();
+	return FALSE;
 
     return (int) msg.wParam;
 }
@@ -168,6 +157,7 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    ReleaseDC(hDesktopWnd, hDesktopDc);
 
+   printf("creating window\n");
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, 
 	   //WS_OVERLAPPEDWINDOW,
 	   WS_POPUP|WS_CLIPCHILDREN|WS_CLIPSIBLINGS,
@@ -175,9 +165,12 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 		//CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, 
 	   nullptr, nullptr, hInstance, nullptr);
 
+   printf("window created\n");
+
    if (!hWnd)
    {
-      return NULL;
+		printf("failed to create window\n");
+		return NULL;
    }
 
    ShowWindow(hWnd, nCmdShow);
@@ -204,6 +197,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 		{
 			// create the rendering thread
+			printf("create rendering thread\n");
 			g_ctx.hQuitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 			g_ctx.hWnd = hWnd;
 			if (FALSE == SetupDirectInput(hInst, hWnd)) {
@@ -215,7 +209,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			g_ctx.useDI = useDI;
 			g_ctx.InputFilename = "c:\\temp\\objects.json";
-			hRenderingThread = (HANDLE)CreateThread(NULL, 0, RenderingThreadTwoEntryPoint, (LPVOID)&g_ctx, 0, &RenderThreadId);
+			hRenderingThread = (HANDLE)CreateThread(NULL, 0, RenderingThreadThreeEntryPoint, (LPVOID)&g_ctx, 0, &RenderThreadId);
 		}
 		break;
 	case WM_COMMAND:

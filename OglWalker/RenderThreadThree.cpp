@@ -4,23 +4,29 @@
 const char* vs1 =
 "#version 330\r\n"
 "layout(location = 0) in vec3 Position;\r\n"
-"layout(location = 1) in vec2 TexCoord;\r\n"
+"layout(location = 1) in vec4 Color;\r\n"
+"layout(location = 2) in vec3 Normal;\r\n"
+"layout(location = 3) in vec2 TexCoord;\r\n"
 "uniform mat4 gWorld;\r\n"
 "out vec2 TexCoord0;\r\n"
+"out vec4 Color0;\r\n"
 "void main()\r\n"
 "{\r\n"
 "	gl_Position = gWorld * vec4(Position, 1.0);\r\n"
 "	TexCoord0 = TexCoord;\r\n"
+"   Color0 = Color;\r\n"
 "}\r\n";
 
 const char* fs1 =
 "#version 330\r\n"
 "in vec2 TexCoord0;\r\n"
+"in vec4 Color0;\r\n"
 "out vec4 FragColor;\r\n"
-"uniform sampler2D gSampler;\r\n"
+//"uniform sampler2D gSampler;\r\n"
 "void main()\r\n"
 "{\r\n"
-"	FragColor = texture2D(gSampler, TexCoord0.xy);\r\n"
+//"	FragColor = texture2D(gSampler, TexCoord0.xy);\r\n"
+"   FragColor = Color0;\r\n"
 "}\r\n";
 
 typedef struct {
@@ -98,9 +104,10 @@ DWORD WINAPI RenderingThreadThreeEntryPoint(void* pVoid)
 	GLuint gWorldLocation;
 	GLuint gSampler;
 
-	GetClientRect(ctx->hWnd, &rect);
-
 	fopen_s(&log, "c:\\temp\\rt.log", "w");
+	fprintf(log, "starting render thread 3\n");
+
+	GetClientRect(ctx->hWnd, &rect);
 
 	QueryPerformanceFrequency(&perfFreq);
 
@@ -121,20 +128,17 @@ DWORD WINAPI RenderingThreadThreeEntryPoint(void* pVoid)
 	rapidjson::Document d;
 	d.Parse(content);
 
+	fprintf(log, "load geometries\n");
 	LoadGeometries(d, &VBA, &IBA);
 
-	//CompileShaders(&gWorldLocation, &gSampler);
+	fprintf(log, "load shaders\n");
+	GLuint ShaderProgram = CompileShaders(vs1, fs1, log);
 
-	//glUniform1i(gSampler, 0);
+	fprintf(log, "get world location\n");
+	gWorldLocation = glGetUniformLocation(ShaderProgram, "gWorld");
+	assert(gWorldLocation != 0xFFFFFFFF);
 
-	//glGenTextures(NUM_ARRAYS, &TEX[0]);
-	//TextureLoad("c:\\temp\\home_capture.png", GL_TEXTURE_2D, TEX[0]);
-	//TextureLoad("c:\\temp\\20180512_173716.jpg", GL_TEXTURE_2D, TEX[1]);
-	//TextureLoad("c:\\temp\\20180512_202051.jpg", GL_TEXTURE_2D, TEX[2]);
-	//TextureLoad("c:\\temp\\20180513_080139.jpg", GL_TEXTURE_2D, TEX[3]);
-	//TextureLoad("c:\\temp\\20180513_082612.jpg", GL_TEXTURE_2D, TEX[4]);
-	//TextureLoad("c:\\temp\\20180513_084356.jpg", GL_TEXTURE_2D, TEX[5]);
-
+	fprintf(log, "start loop\n");
 	while (1) {
 
 		if (WaitForSingleObject(ctx->hQuitEvent, 0) == WAIT_OBJECT_0) {
@@ -258,6 +262,14 @@ DWORD WINAPI RenderingThreadThreeEntryPoint(void* pVoid)
 
 			glActiveTexture(GL_TEXTURE0);
 
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBA);
+			glBindBuffer(GL_ARRAY_BUFFER, VBA);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)0);
+			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)12);
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)28);
+			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)40);
+			glDrawElements(GL_TRIANGLES, 1 * 3, GL_UNSIGNED_INT, 0);
+
 			//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBOA[1]);
 			//glBindBuffer(GL_ARRAY_BUFFER, VBOA[0]);
 			//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec5), 0);
@@ -277,6 +289,8 @@ DWORD WINAPI RenderingThreadThreeEntryPoint(void* pVoid)
 			// disable
 			glDisableVertexAttribArray(0);
 			glDisableVertexAttribArray(1);
+			glDisableVertexAttribArray(2);
+			glDisableVertexAttribArray(3);
 
 			SwapBuffers(hdc);
 		}

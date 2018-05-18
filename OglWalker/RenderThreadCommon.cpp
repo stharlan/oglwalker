@@ -77,8 +77,10 @@ void ChangeSize(GLsizei w, GLsizei h) {
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType)
+void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType, FILE* log)
 {
+
+	fprintf(log, "creating shader %s\n", pShaderText);
 	GLuint ShaderObj = glCreateShader(ShaderType);
 
 	if (ShaderObj == 0) {
@@ -159,26 +161,30 @@ bool TextureLoad(const char* m_fileName, GLenum m_textureTarget, GLuint TextureO
 	return true;
 }
 
-GLuint CompileShaders(GLuint* gWorldLocation, GLuint* gSampler, const char* vs1, const char* fs1)
+GLuint CompileShaders(const char* vs1, const char* fs1, FILE* log)
 {
+	fprintf(log, "compiling shaders\n");
+
 	GLuint ShaderProgram = glCreateProgram();
 
 	if (ShaderProgram == 0) {
-		fprintf(stderr, "Error creating shader program\n");
+		fprintf(log, "Error creating shader program\n");
 		exit(1);
 	}
 
-	AddShader(ShaderProgram, vs1, GL_VERTEX_SHADER);
-	AddShader(ShaderProgram, fs1, GL_FRAGMENT_SHADER);
+	fprintf(log, "adding shaders\n");
+	AddShader(ShaderProgram, vs1, GL_VERTEX_SHADER, log);
+	AddShader(ShaderProgram, fs1, GL_FRAGMENT_SHADER, log);
 
 	GLint Success = 0;
 	GLchar ErrorLog[1024] = { 0 };
 
+	fprintf(log, "linking shaders\n");
 	glLinkProgram(ShaderProgram);
 	glGetProgramiv(ShaderProgram, GL_LINK_STATUS, &Success);
 	if (Success == 0) {
 		glGetProgramInfoLog(ShaderProgram, sizeof(ErrorLog), NULL, ErrorLog);
-		fprintf(stderr, "Error linking shader program: '%s'\n", ErrorLog);
+		fprintf(log, "Error linking shader program: '%s'\n", ErrorLog);
 		exit(1);
 	}
 
@@ -186,7 +192,7 @@ GLuint CompileShaders(GLuint* gWorldLocation, GLuint* gSampler, const char* vs1,
 	glGetProgramiv(ShaderProgram, GL_VALIDATE_STATUS, &Success);
 	if (!Success) {
 		glGetProgramInfoLog(ShaderProgram, sizeof(ErrorLog), NULL, ErrorLog);
-		fprintf(stderr, "Invalid shader program: '%s'\n", ErrorLog);
+		fprintf(log, "Invalid shader program: '%s'\n", ErrorLog);
 		exit(1);
 	}
 

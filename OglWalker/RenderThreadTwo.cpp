@@ -197,7 +197,7 @@ DWORD WINAPI RenderingThreadTwoEntryPoint(void* pVoid)
 	glGenBuffers(2, &IBOA[0]);
 	CreateIndexBuffer(&IBOA[0]);
 
-	GLuint ShaderProgram =  CompileShaders(&gWorldLocation, &gSampler, vs, fs);
+	GLuint ShaderProgram =  CompileShaders(vs, fs, log);
 
 	gWorldLocation = glGetUniformLocation(ShaderProgram, "gWorld");
 	assert(gWorldLocation != 0xFFFFFFFF);
