@@ -228,20 +228,24 @@ BOOL InitPipeline()
 	D3D11_INPUT_ELEMENT_DESC InputElementDescriptor[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 
 	sCode = ReadTextFile("shaders.hlsl", &sSize);
 
 	if (!sCode) return FALSE;
 
-	if (FAILED(D3D10CompileShader(sCode, sSize, nullptr, nullptr, nullptr, "VShader", "vs_4_0", 0, &VS, &pErrs)))
+	//D3D10_SHADER_PACK_MATRIX_ROW_MAJOR
+
+	if (FAILED(D3D10CompileShader(sCode, sSize, nullptr, nullptr, nullptr, 
+		"VShader", "vs_4_0", 0, &VS, &pErrs)))
 	{
 		free(sCode);
 		return FALSE;
 	}
 
-	if (FAILED(D3D10CompileShader(sCode, sSize, nullptr, nullptr, nullptr, "PShader", "ps_4_0", 0, &PS, &pErrs)))
+	if (FAILED(D3D10CompileShader(sCode, sSize, nullptr, nullptr, nullptr, 
+		"PShader", "ps_4_0", 0, &PS, &pErrs)))
 	{
 		free(sCode);
 		return FALSE;
@@ -273,11 +277,19 @@ BOOL InitGraphics()
 		//{ glm::vec3(0.45f, -0.5, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
 		//{ glm::vec3(-0.45f, -0.5f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) }
 		{ glm::vec3(-5.0f, -5.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) },
-	{ glm::vec3(5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
-	{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) },
-	{ glm::vec3(5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
-	{ glm::vec3(5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
-	{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) }
+		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) },
+		{ glm::vec3( 5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ glm::vec3( 5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) },
+		{ glm::vec3( 5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
+
+		{ glm::vec3(-10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ glm::vec3( 10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ glm::vec3( 10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ glm::vec3( 10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f) }
+		
 	};
 	REND_CONST_BUFFER rcBuffer;
 	D3D11_BUFFER_DESC rcBufferDesc;
@@ -338,13 +350,14 @@ BOOL UpdateFrame(void)
 	D3D11_MAPPED_SUBRESOURCE ms;
 	static float var = 0.0f;
 	var += 0.001f;
-	rcBuffer.WorldMatrix = glm::mat4x4(1.0f)
+	glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
 		* glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f)
 		* glm::lookAt(
-			glm::vec3(0.0f, 0.0f, -20.0f),
-			glm::vec3(0.0f, 0.0f, -19.0f),
+			glm::vec3(0.0f, 0.0f, 20.0f),
+			glm::vec3(0.0f, 0.0f, 19.0f),
 			glm::vec3(0.0f, 1.0f, 0.0))
 		;
+	rcBuffer.WorldMatrix = glm::transpose(unTransposedWorldMatrix);
 	if (FAILED(lpDevcon->Map(pWorldTransformBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
 	memcpy(ms.pData, &rcBuffer, sizeof(REND_CONST_BUFFER));
 	lpDevcon->Unmap(pWorldTransformBuffer, NULL);
@@ -368,7 +381,7 @@ BOOL RenderFrame(void)
 	lpDevcon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// draw the vertex buffer to the back buffer
-	lpDevcon->Draw(6, 0);
+	lpDevcon->Draw(12, 0);
 
 	// switch the back buffer and the front buffer
 	if (FAILED(lpSwapchain->Present(0, 0))) return FALSE;
