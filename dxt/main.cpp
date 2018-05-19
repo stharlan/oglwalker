@@ -13,15 +13,23 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/transform.hpp>
+#include <Magick++.h>
+#include "WICTextureLoader.h"
 
 // define the screen resolution
-#define SCREEN_WIDTH  800
-#define SCREEN_HEIGHT 600
+#define SCREEN_WIDTH  1280
+#define SCREEN_HEIGHT 1024
 
 #pragma comment (lib, "d3d11.lib")
 #pragma comment (lib, "d3d10.lib")
 #pragma comment (lib, "dinput8.lib")
 #pragma comment (lib, "dxguid.lib")
+#pragma comment(lib, "CORE_RL_Magick++_.lib")
+#pragma comment(lib, "CORE_RL_MagickCore_.lib")
+
+HWND g_hWnd = NULL;
+LARGE_INTEGER pFreq;
+LARGE_INTEGER pLast;
 
 IDXGISwapChain *lpSwapchain = nullptr;
 ID3D11Device *lpDev = nullptr;
@@ -31,20 +39,28 @@ ID3D11VertexShader *lpVS = nullptr;
 ID3D11PixelShader *lpPS = nullptr;
 ID3D11Buffer *pVBuffer = nullptr;
 ID3D11Buffer *pWorldTransformBuffer = nullptr;
+ID3D11Buffer *pLightInfoBuffer = nullptr;
 ID3D11InputLayout *pLayout = nullptr;
 ID3D11Texture2D* pDepthStencil = nullptr;
 ID3D11DepthStencilView* pDSV = nullptr;
 ID3D11DepthStencilState *pDSState = nullptr;
+ID3D11Texture2D *pTextureResource = nullptr;
+ID3D11ShaderResourceView *pTextureResView = nullptr;
+ID3D11SamplerState *pSamplerState = nullptr;
 
 IDirectInput8 *pDirectInput8 = nullptr;
 IDirectInputDevice8 *pKeyboard = nullptr;
 IDirectInputDevice8 *pMouse = nullptr;
 
-struct VERTEX1 { glm::vec3 pos; glm::vec4 clr; glm::vec3 nrml; };    // a struct to define a vertex
+struct VERTEX2 { glm::vec3 pos; glm::vec4 clr; glm::vec3 nrml; glm::vec2 texc; };    // a struct to define a vertex
 
-struct REND_CONST_BUFFER1
+struct VREND_CONST_BUFFER1
 {
 	glm::mat4x4 WorldMatrix;
+};
+
+struct PREND_CONST_BUFFER
+{
 	glm::vec4 f4LightDiffuse;
 	glm::vec4 f4LightAmbient;
 	glm::vec3 f3LightDir;
@@ -57,6 +73,7 @@ BOOL RenderFrame(void);
 BOOL UpdateFrame(void);
 BOOL InitPipeline();
 BOOL InitGraphics();
+BOOL InitTextures();
 
 struct UserLocation {
 	float azimuth;
@@ -88,6 +105,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nCmdShow)
 {
+
+	LARGE_INTEGER pThisTime;
+	char TitleText[256];
 
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
@@ -126,7 +146,14 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	if (FALSE == InitD3D(hWnd)) return 0;
 	if (FALSE == InitPipeline()) return 0;
 	if (FALSE == InitGraphics()) return 0;
+	if (FALSE == InitTextures()) return 0;
+
+	QueryPerformanceFrequency(&pFreq);
+	QueryPerformanceCounter(&pLast);
+
 	ShowCursor(FALSE);
+
+	g_hWnd = hWnd;
 
 	ShowWindow(hWnd, nCmdShow);
 
@@ -146,6 +173,13 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 				break;
 		}
 		else {
+
+			QueryPerformanceCounter(&pThisTime);
+			LONGLONG fps = pFreq.QuadPart / (pThisTime.QuadPart - pLast.QuadPart);
+			ZeroMemory(TitleText, 256);
+			sprintf_s(TitleText, 256, "FPS %lli", fps);
+			SetWindowText(hWnd, TitleText);
+			pLast = pThisTime;
 
 			// Run game code here
 			if (FALSE == UpdateFrame())
@@ -320,11 +354,12 @@ BOOL InitPipeline()
 	ID3D10Blob* pErrs = nullptr;
 	char *sCode = nullptr;
 	size_t sSize = 0;
-	D3D11_INPUT_ELEMENT_DESC InputElementDescriptor1[] =
+	D3D11_INPUT_ELEMENT_DESC InputElementDescriptor2[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 
 	sCode = ReadTextFile("shaders.hlsl", &sSize);
@@ -354,7 +389,7 @@ BOOL InitPipeline()
 	lpDevcon->PSSetShader(lpPS, 0, 0);
 
 	// create the input layout object
-	if (FAILED(lpDev->CreateInputLayout(InputElementDescriptor1, _ARRAYSIZE(InputElementDescriptor1), 
+	if (FAILED(lpDev->CreateInputLayout(InputElementDescriptor2, _ARRAYSIZE(InputElementDescriptor2), 
 		VS->GetBufferPointer(), VS->GetBufferSize(), &pLayout))) return FALSE;
 	lpDevcon->IASetInputLayout(pLayout);
 
@@ -367,35 +402,36 @@ BOOL InitGraphics()
 	D3D11_MAPPED_SUBRESOURCE ms;
 	// create a triangle using the VERTEX struct
 	// windind is CW
-	VERTEX1 GeometryVertices[] =
+	VERTEX2 GeometryVertices[] =
 	{
 		//{ glm::vec3(0.0f, 0.5f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) },
 		//{ glm::vec3(0.45f, -0.5, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
 		//{ glm::vec3(-0.45f, -0.5f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) }
-		{ glm::vec3(-5.0f, -5.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f) },
-		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f) },
-		{ glm::vec3( 5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f) },
-		{ glm::vec3( 5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f) },
-		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f) },
-		{ glm::vec3( 5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f) },
+		{ glm::vec3(-5.0f, -5.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
+		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
+		{ glm::vec3( 5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
+		{ glm::vec3( 5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
+		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
+		{ glm::vec3( 5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f) },
 
-		{ glm::vec3(-10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f) },
-		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f) },
-		{ glm::vec3( 10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f) },
-		{ glm::vec3( 10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f) },
-		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f) },
-		{ glm::vec3( 10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f) }
+		{ glm::vec3(-10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f) },
+		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
+		{ glm::vec3( 10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
+		{ glm::vec3( 10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
+		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
+		{ glm::vec3( 10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f) }
 		
 	};
-	REND_CONST_BUFFER1 rcBuffer1;
+	VREND_CONST_BUFFER1 rcBuffer1;
 	D3D11_BUFFER_DESC rcBufferDesc;
-
+	PREND_CONST_BUFFER PixelRendererConstBuffer;
+	D3D11_BUFFER_DESC PixelRendererConstBufferDesc;
 
 	// create the vertex buffer
 	ZeroMemory(&VertexBufferDescriptor, sizeof(VertexBufferDescriptor));
 
 	VertexBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;                // write access access by CPU and GPU
-	VertexBufferDescriptor.ByteWidth = sizeof(VERTEX1) * _ARRAYSIZE(GeometryVertices);             // size is the VERTEX struct * 3
+	VertexBufferDescriptor.ByteWidth = sizeof(VERTEX2) * _ARRAYSIZE(GeometryVertices);             // size is the VERTEX struct * 3
 	VertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;       // use as a vertex buffer
 	VertexBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // allow CPU to write in buffer
 
@@ -409,12 +445,8 @@ BOOL InitGraphics()
 
 																		  // create an identiy matrix
 	rcBuffer1.WorldMatrix = glm::mat4x4(1.0f);
-	rcBuffer1.f3LightDir = glm::vec3(0.0f, -1.0f, 0.0f);
-	rcBuffer1.f4LightAmbient = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
-	rcBuffer1.f4LightDiffuse = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	rcBuffer1.f1 = 0.0f;
 
-	rcBufferDesc.ByteWidth = sizeof(REND_CONST_BUFFER1);
+	rcBufferDesc.ByteWidth = sizeof(VREND_CONST_BUFFER1);
 	rcBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 	rcBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	rcBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -422,18 +454,133 @@ BOOL InitGraphics()
 	rcBufferDesc.StructureByteStride = 0;
 
 	// Create the buffer.
-	HRESULT hr = lpDev->CreateBuffer(&rcBufferDesc, nullptr, &pWorldTransformBuffer);
-	if (FAILED(hr)) {
-		unsigned int blah = hr;
-		return false;
-	}
+	if (FAILED(lpDev->CreateBuffer(&rcBufferDesc, nullptr, &pWorldTransformBuffer))) return FALSE;
 
 	// Set the buffer.
 	if (FAILED(lpDevcon->Map(pWorldTransformBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
-	memcpy(ms.pData, &rcBuffer1, sizeof(REND_CONST_BUFFER1));
+	memcpy(ms.pData, &rcBuffer1, sizeof(VREND_CONST_BUFFER1));
 	lpDevcon->Unmap(pWorldTransformBuffer, NULL);
 
 	lpDevcon->VSSetConstantBuffers(0, 1, &pWorldTransformBuffer);
+
+	// pixel shader const buffer
+	//PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
+	PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f));
+	PixelRendererConstBuffer.f4LightAmbient = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+	PixelRendererConstBuffer.f4LightDiffuse = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	PixelRendererConstBuffer.f1 = 0.0f;
+
+	PixelRendererConstBufferDesc.ByteWidth = sizeof(PREND_CONST_BUFFER);
+	PixelRendererConstBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	PixelRendererConstBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	PixelRendererConstBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	PixelRendererConstBufferDesc.MiscFlags = 0;
+	PixelRendererConstBufferDesc.StructureByteStride = 0;
+
+	// Create the buffer.
+	if (FAILED(lpDev->CreateBuffer(&PixelRendererConstBufferDesc, nullptr, &pLightInfoBuffer))) return false;
+
+	// Set the buffer.
+	if (FAILED(lpDevcon->Map(pLightInfoBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
+	memcpy(ms.pData, &PixelRendererConstBuffer, sizeof(PREND_CONST_BUFFER));
+	lpDevcon->Unmap(pLightInfoBuffer, NULL);
+
+	lpDevcon->PSSetConstantBuffers(1, 1, &pLightInfoBuffer);
+
+	return TRUE;
+}
+
+BOOL InitTextures()
+{
+	size_t maxsize;
+	Magick::Image m_image;
+	Magick::Blob m_blob;
+
+	try {
+		m_image.read("c:\\temp\\me.jpg");
+		m_image.write(&m_blob, "RGBA");
+	}
+	catch (Magick::Error& Error) {
+		return FALSE;
+	}
+
+	//unsigned int imageWidth = m_image.columns();
+	//unsigned int imageHeight = m_image.rows();
+	//const void* imageData = m_blob.data();
+	//unsigned int imageWidth = 2;
+	//unsigned int imageHeight = 2;
+	//char imageData [] = {
+		//0, 255, 0, 255,
+		//0, 255, 0, 255,
+		//0, 255, 0, 255,
+		//0, 255, 0, 255
+	//};
+
+	switch (lpDev->GetFeatureLevel())
+	{
+	case D3D_FEATURE_LEVEL_9_1:
+	case D3D_FEATURE_LEVEL_9_2:
+		maxsize = 2048 /*D3D_FL9_1_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
+		break;
+
+	case D3D_FEATURE_LEVEL_9_3:
+		maxsize = 4096 /*D3D_FL9_3_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
+		break;
+
+	case D3D_FEATURE_LEVEL_10_0:
+	case D3D_FEATURE_LEVEL_10_1:
+		maxsize = 8192 /*D3D10_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
+		break;
+
+	default:
+		maxsize = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+		break;
+	}
+
+	D3D11_TEXTURE2D_DESC desc;
+	ZeroMemory(&desc, sizeof(D3D11_TEXTURE2D_DESC));
+	desc.Width = m_image.columns();
+	desc.Height = m_image.rows();
+	desc.MipLevels = desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	desc.SampleDesc.Count = 1;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	desc.MiscFlags = 0;
+	if (FAILED(lpDev->CreateTexture2D(&desc, nullptr, &pTextureResource))) return FALSE;
+
+	// create a texture resource view
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc;
+	ZeroMemory(&SRVDesc, sizeof(D3D11_SHADER_RESOURCE_VIEW_DESC));
+	SRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	SRVDesc.Texture2D.MipLevels = 1;
+
+	if (FAILED(lpDev->CreateShaderResourceView(pTextureResource, &SRVDesc, &pTextureResView))) return FALSE;
+
+	lpDevcon->PSSetShaderResources(0, 1, &pTextureResView);
+
+	// set the texture data
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+	if (FAILED(lpDevcon->Map(pTextureResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource))) return FALSE;
+	memcpy(mappedResource.pData, m_blob.data(), m_blob.length());
+	lpDevcon->Unmap(pTextureResource, 0);
+
+	// create a sampler
+	D3D11_SAMPLER_DESC samplerDesc;
+	ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	if (FAILED(lpDev->CreateSamplerState(&samplerDesc, &pSamplerState))) return FALSE;
+
+	lpDevcon->PSSetSamplers(0, 1, &pSamplerState);
 
 	return TRUE;
 }
@@ -450,9 +597,12 @@ glm::mat4 camera(float Translate, glm::vec2 const & Rotate)
 
 BOOL UpdateFrame(void)
 {
-	REND_CONST_BUFFER1 rcBuffer1;
+	VREND_CONST_BUFFER1 rcBuffer1;
 	D3D11_MAPPED_SUBRESOURCE ms;
 	static UserLocation loc = { 0.0f, 0.0f, 0.0f, 20.0f };
+	static float var = 0.0f;
+
+	var += 0.01f;
 
 	ProcessInput(&loc);
 	glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
@@ -461,14 +611,11 @@ BOOL UpdateFrame(void)
 			glm::vec3(loc.ex, 0.0f, loc.ez),
 			glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), 0.0f - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
 			glm::vec3(0.0f, 1.0f, 0.0))
+		* glm::rotate(glm::radians(var), glm::vec3(0.0f, 1.0f, 0.0f))
 		;
 	rcBuffer1.WorldMatrix = glm::transpose(unTransposedWorldMatrix);
-	rcBuffer1.f3LightDir = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
-	rcBuffer1.f4LightAmbient = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-	rcBuffer1.f4LightDiffuse = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	rcBuffer1.f1 = 0.0f;
 	if (FAILED(lpDevcon->Map(pWorldTransformBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
-	memcpy(ms.pData, &rcBuffer1, sizeof(REND_CONST_BUFFER1));
+	memcpy(ms.pData, &rcBuffer1, sizeof(VREND_CONST_BUFFER1));
 	lpDevcon->Unmap(pWorldTransformBuffer, NULL);
 	return TRUE;
 }
@@ -483,7 +630,7 @@ BOOL RenderFrame(void)
 
 	// do 3D rendering on the back buffer here
 	// select which vertex buffer to display
-	UINT stride = sizeof(VERTEX1);
+	UINT stride = sizeof(VERTEX2);
 	UINT offset = 0;
 	lpDevcon->IASetVertexBuffers(0, 1, &pVBuffer, &stride, &offset);
 
@@ -502,11 +649,16 @@ BOOL RenderFrame(void)
 void CleanD3D(void)
 {
 	if (lpSwapchain) lpSwapchain->SetFullscreenState(FALSE, NULL);
+	if (pSamplerState) pSamplerState->Release();
+	if (pTextureResource) pTextureResource->Release();
+	if (pTextureResView) pTextureResView->Release();
 	if (pDSV) pDSV->Release();
 	if (pDSState) pDSState->Release();
 	if (pDepthStencil) pDepthStencil->Release();
 	if (pLayout) pLayout->Release();
 	if (pVBuffer) pVBuffer->Release();
+	if (pWorldTransformBuffer) pWorldTransformBuffer->Release();
+	if (pLightInfoBuffer) pLightInfoBuffer->Release();
 	if (lpVS) lpVS->Release();
 	if (lpPS) lpPS->Release();
 	if (lpSwapchain) lpSwapchain->Release();
@@ -587,9 +739,9 @@ void ProcessInput(UserLocation* pLoc)
 	}
 	if (TRUE == ReadKeyboardState(&keystate[0]))
 	{
-		//if (keystate[DIK_ESCAPE] == (unsigned char)128) {
-		//	PostMessage(ctx->hWnd, CUSTOM_QUIT, 0, 0);
-		//}
+		if (keystate[DIK_ESCAPE] == (unsigned char)128) {
+			DestroyWindow(g_hWnd);
+		}
 
 		float px = 0.0f, pz = 0.0f;
 		float EyeAzimuthInRadians = 0.0f;
