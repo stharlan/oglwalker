@@ -215,6 +215,8 @@ namespace SHDX11 {
 			return FALSE;
 		}
 
+		free(sCode);
+
 		// encapsulate both shaders into shader objects
 		if (FAILED(lpDev->CreateVertexShader(VS->GetBufferPointer(), VS->GetBufferSize(), NULL, &lpVS))) return FALSE;
 		if (FAILED(lpDev->CreatePixelShader(PS->GetBufferPointer(), PS->GetBufferSize(), NULL, &lpPS))) return FALSE;

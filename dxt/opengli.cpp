@@ -17,33 +17,33 @@
 
 namespace SHOGL {
 
-	const char* vs1 =
-		"#version 330\r\n"
-		"layout(location = 0) in vec3 Position;\r\n"
-		"layout(location = 1) in vec4 Color;\r\n"
-		"layout(location = 2) in vec3 Normal;\r\n"
-		"layout(location = 3) in vec2 TexCoord;\r\n"
-		"uniform mat4 gWorld;\r\n"
-		"out vec2 TexCoord0;\r\n"
-		"out vec4 Color0;\r\n"
-		"void main()\r\n"
-		"{\r\n"
-		"	gl_Position = gWorld * vec4(Position, 1.0);\r\n"
-		"	TexCoord0 = TexCoord;\r\n"
-		"   Color0 = Color;\r\n"
-		"}\r\n";
+	//const char* vs1 =
+	//	"#version 330\r\n"
+	//	"layout(location = 0) in vec3 Position;\r\n"
+	//	"layout(location = 1) in vec4 Color;\r\n"
+	//	"layout(location = 2) in vec3 Normal;\r\n"
+	//	"layout(location = 3) in vec2 TexCoord;\r\n"
+	//	"uniform mat4 gWorld;\r\n"
+	//	"out vec2 TexCoord0;\r\n"
+	//	"out vec4 Color0;\r\n"
+	//	"void main()\r\n"
+	//	"{\r\n"
+	//	"	gl_Position = gWorld * vec4(Position, 1.0);\r\n"
+	//	"	TexCoord0 = TexCoord;\r\n"
+	//	"   Color0 = Color;\r\n"
+	//	"}\r\n";
 
-	const char* fs1 =
-		"#version 330\r\n"
-		"in vec2 TexCoord0;\r\n"
-		"in vec4 Color0;\r\n"
-		"out vec4 FragColor;\r\n"
-		"uniform sampler2D gSampler;\r\n"
-		"void main()\r\n"
-		"{\r\n"
-		"	FragColor = texture2D(gSampler, TexCoord0.xy);\r\n"
-		//"   FragColor = Color0;\r\n"
-		"}\r\n";
+	//const char* fs1 =
+	//	"#version 330\r\n"
+	//	"in vec2 TexCoord0;\r\n"
+	//	"in vec4 Color0;\r\n"
+	//	"out vec4 FragColor;\r\n"
+	//	"uniform sampler2D gSampler;\r\n"
+	//	"void main()\r\n"
+	//	"{\r\n"
+	//	"	FragColor = texture2D(gSampler, TexCoord0.xy);\r\n"
+	//	//"   FragColor = Color0;\r\n"
+	//	"}\r\n";
 
 	HWND g_hWnd = nullptr;
 	HDC g_hdc = nullptr;
@@ -148,14 +148,25 @@ namespace SHOGL {
 		glAttachShader(ShaderProgram, ShaderObj);
 	}
 
-	BOOL CompileShaders(const char* vs1, const char* fs1, GLuint* lpShaderProgram)
+	BOOL CompileShaders(const char* vsFilename, const char* fsFilename, GLuint* lpShaderProgram)
 	{
 		GLuint ShaderProgram = glCreateProgram();
+		size_t sourceSize = 0;
+		char* sourceCode = nullptr;
 
 		if (ShaderProgram == 0) return FALSE;
 
-		AddShader(ShaderProgram, vs1, GL_VERTEX_SHADER);
-		AddShader(ShaderProgram, fs1, GL_FRAGMENT_SHADER);
+		sourceCode = ReadTextFile(vsFilename, &sourceSize);
+		if (FALSE == AddShader(ShaderProgram, sourceCode, GL_VERTEX_SHADER)) {
+			free(sourceCode);
+			return FALSE;
+		}
+
+		sourceCode = ReadTextFile(fsFilename, &sourceSize);
+		if (FALSE == AddShader(ShaderProgram, sourceCode, GL_FRAGMENT_SHADER)) {
+			free(sourceCode);
+			return FALSE;
+		}
 
 		GLint Success = 0;
 		GLchar ErrorLog[1024] = { 0 };
@@ -189,7 +200,7 @@ namespace SHOGL {
 		glCullFace(GL_BACK);
 		glEnable(GL_CULL_FACE);
 
-		if (FALSE == CompileShaders(vs1, fs1, &ShaderProgram)) return FALSE;
+		if (FALSE == CompileShaders("vshader.glsl", "fshader.glsl", &ShaderProgram)) return FALSE;
 
 		WorldLocation = glGetUniformLocation(ShaderProgram, "gWorld");
 
