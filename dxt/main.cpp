@@ -1,6 +1,7 @@
 
 //#define USING_DIRECTX11
 #define USING_OPENGL
+#define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
 #pragma comment (lib, "d3d10.lib")
@@ -14,11 +15,12 @@
 #include <windows.h>
 #include <stdio.h>
 #include <fx/gltf.h>
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtx/transform.hpp>
 #include "dddcommon.h"
 #include "dx11i.h"
 #include "opengli.h"
-
-#include <glm/vec3.hpp>
 
 // define the screen resolution
 #define SCREEN_WIDTH  640
@@ -27,7 +29,7 @@
 LARGE_INTEGER pFreq;
 LARGE_INTEGER pLast;
 
-void TestLoadGlb()
+void TestLoadGlb(TriangleMeshConfig *m)
 {
 	std::ofstream dbg("c:\\temp\\glb_debug.txt");
 	dbg << "opening file" << std::endl;
@@ -67,6 +69,15 @@ void TestLoadGlb()
 				memcpy(usbuffer, &bfr.data.at(bv.byteOffset), bv.byteLength);
 				for (unsigned int x = 0; x < ia.count; x++) {
 					dbg << usbuffer[x].r << ", " << usbuffer[x].g << ", " << usbuffer[x].b << std::endl;
+				}
+
+				if (element.first.compare("NORMAL") == 0) {
+					m->NumNormals = ia.count;
+					m->normals = usbuffer;
+				}
+				else if (element.first.compare("POSITION") == 0) {
+					m->NumPositions = ia.count;
+					m->positions = usbuffer;
 				}
 
 			}
@@ -112,7 +123,9 @@ void TestLoadGlb()
 			for (unsigned int x = 0; x < ia.count; x++) {
 				dbg << usbuffer[x] << std::endl;
 			}
-			free(usbuffer);
+			
+			m->NumIndexes = ia.count;
+			m->indexes = usbuffer;
 
 		}
 	}
@@ -141,8 +154,20 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	LARGE_INTEGER pThisTime;
 	char TitleText[256];
 
-	TestLoadGlb();
-	if (true) return 0;
+	TriangleMeshConfig m;
+	TestLoadGlb(&m);
+	m.winding = MeshConfigWinding::CounterClockwise;
+	// SRT scale rotate translate (opposite multiply?)
+	m.model = glm::mat4x4(1.0f) 
+		* glm::translate(glm::vec3(0.0f, 10.0f, -50.0f))
+		* glm::scale(glm::vec3(10.0f, 10.0f, 10.0f));
+	
+	assert(m.indexes != nullptr);
+	assert(m.NumIndexes > 0);
+	assert(m.normals != nullptr);
+	assert(m.NumNormals > 0);
+	assert(m.positions != nullptr);
+	assert(m.NumPositions > 0);
 
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
@@ -181,13 +206,14 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 #ifdef USING_OPENGL
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
-	if (FALSE == SHOGL::InitGraphics()) return 0;
+	if (FALSE == SHOGL::InitGraphicsA(&m, 1)) return 0;
+	//if (FALSE == SHOGL::InitGraphics()) return 0;
 	if (FALSE == SHOGL::InitTextures()) return 0;
 #endif
 #ifdef USING_DIRECTX11
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHDX11::InitPipeline()) return 0;
-	if (FALSE == SHDX11::InitGraphics()) return 0;
+	if (FALSE == SHDX11::InitGraphicsA(&m)) return 0;
 	if (FALSE == SHDX11::InitTextures()) return 0;
 #endif
 
@@ -224,10 +250,8 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 
 			// Run game code here
 #ifdef USING_OPENGL
-			if (FALSE == SHOGL::UpdateFrame(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT))
-				break;
-			if (FALSE == SHOGL::RenderFrame())
-				break;
+			if (FALSE == SHOGL::UpdateFrame(hWnd)) break;
+			if (FALSE == SHOGL::RenderFrame()) break;
 #endif
 #ifdef USING_DIRECTX11
 			if (FALSE == SHDX11::UpdateFrame(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -246,5 +270,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 #ifdef USING_DIRECTX11
 	SHDX11::Cleanup();
 #endif
+
+	free(m.indexes);
+	free(m.normals);
+	free(m.positions);
+
 	return 0;
 }

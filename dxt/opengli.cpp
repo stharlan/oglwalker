@@ -5,6 +5,8 @@
 #define GLEW_STATIC
 
 #include <Windows.h>
+#include <iostream>
+#include <fstream>
 #include <GL/glew.h>
 #include <gl/GL.h>
 #include <gl/GLU.h>
@@ -12,45 +14,24 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/transform.hpp>
 #include <Magick++.h>
-#include "opengli.h"
 #include "dddcommon.h"
+#include "opengli.h"
 
 namespace SHOGL {
-
-	//const char* vs1 =
-	//	"#version 330\r\n"
-	//	"layout(location = 0) in vec3 Position;\r\n"
-	//	"layout(location = 1) in vec4 Color;\r\n"
-	//	"layout(location = 2) in vec3 Normal;\r\n"
-	//	"layout(location = 3) in vec2 TexCoord;\r\n"
-	//	"uniform mat4 gWorld;\r\n"
-	//	"out vec2 TexCoord0;\r\n"
-	//	"out vec4 Color0;\r\n"
-	//	"void main()\r\n"
-	//	"{\r\n"
-	//	"	gl_Position = gWorld * vec4(Position, 1.0);\r\n"
-	//	"	TexCoord0 = TexCoord;\r\n"
-	//	"   Color0 = Color;\r\n"
-	//	"}\r\n";
-
-	//const char* fs1 =
-	//	"#version 330\r\n"
-	//	"in vec2 TexCoord0;\r\n"
-	//	"in vec4 Color0;\r\n"
-	//	"out vec4 FragColor;\r\n"
-	//	"uniform sampler2D gSampler;\r\n"
-	//	"void main()\r\n"
-	//	"{\r\n"
-	//	"	FragColor = texture2D(gSampler, TexCoord0.xy);\r\n"
-	//	//"   FragColor = Color0;\r\n"
-	//	"}\r\n";
 
 	HWND g_hWnd = nullptr;
 	HDC g_hdc = nullptr;
 	HGLRC g_hglrc = nullptr;
 
-	GLuint VBA = 0;
-	GLuint IBA = 0;
+	struct TriangleMesh {
+		GLuint VBA;
+		GLuint IBA;
+		GLuint NumIndexes;
+		GLenum Winding;
+		glm::mat4x4 model;
+	};
+	TriangleMesh *meshes = nullptr;
+	GLuint NumMeshes = 0;
 	GLuint ShaderProgram = 0;
 	GLuint WorldLocation = 0;
 	GLuint gSampler = 0;
@@ -62,6 +43,10 @@ namespace SHOGL {
 		glm::vec3 normal;
 		glm::vec2 texture;
 	} glmvec12;
+
+	UserLocation loc = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+	unsigned int gScreenWidth = 0, gScreenHeight = 0;
 
 	bool TextureLoad(const char* m_fileName, GLenum m_textureTarget, GLuint TextureObjectId)
 	{
@@ -111,6 +96,9 @@ namespace SHOGL {
 
 	BOOL Init(HWND hWnd, unsigned int ScreenWidth, unsigned int ScreenHeight)
 	{
+		gScreenWidth = ScreenWidth;
+		gScreenHeight = ScreenHeight;
+
 		g_hWnd = hWnd;
 
 		g_hdc = GetDC(hWnd);
@@ -196,7 +184,7 @@ namespace SHOGL {
 	{
 		glClearColor(0.0f, 0.2f, 0.4f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
-		glFrontFace(GL_CW);
+		glFrontFace(GL_CCW);
 		glCullFace(GL_BACK);
 		glEnable(GL_CULL_FACE);
 
@@ -214,42 +202,44 @@ namespace SHOGL {
 		return TRUE;
 	}
 
-	BOOL InitGraphics(void)
-	{
-		glmvec12 GeometryVertices[] =
-		{
-			{ glm::vec3(-5.0f, -5.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
-			{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
-			{ glm::vec3(5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
-			{ glm::vec3(5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
-			{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
-			{ glm::vec3(5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f) },
+	//BOOL InitGraphics(void)
+	//{
+	//	glmvec12 GeometryVertices[] =
+	//	{
+	//		{ glm::vec3(-5.0f, -5.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
+	//		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
+	//		{ glm::vec3(5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
+	//		{ glm::vec3(5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
+	//		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
+	//		{ glm::vec3(5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f) },
 
-			{ glm::vec3(-10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f) },
-			{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
-			{ glm::vec3(10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
-			{ glm::vec3(10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
-			{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
-			{ glm::vec3(10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f) }
-		};
+	//		{ glm::vec3(-10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f) },
+	//		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
+	//		{ glm::vec3(10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
+	//		{ glm::vec3(10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
+	//		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
+	//		{ glm::vec3(10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f) }
+	//	};
 
-		glGenBuffers(1, &VBA);
-		glBindBuffer(GL_ARRAY_BUFFER, VBA);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GeometryVertices), GeometryVertices, GL_STATIC_DRAW);
+	//	glGenBuffers(1, &VBA);
+	//	glBindBuffer(GL_ARRAY_BUFFER, VBA);
+	//	glBufferData(GL_ARRAY_BUFFER, sizeof(GeometryVertices), GeometryVertices, GL_STATIC_DRAW);
 
-		unsigned int IndexArray[] = {
-			0, 1, 2,
-			3, 4, 5,
-			6, 7, 8,
-			9, 10, 11
-		};
+	//	unsigned int IndexArray[] = {
+	//		0, 1, 2,
+	//		3, 4, 5,
+	//		6, 7, 8,
+	//		9, 10, 11
+	//	};
 
-		glGenBuffers(2, &IBA);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBA);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(IndexArray), IndexArray, GL_STATIC_DRAW);
+	//	glGenBuffers(1, &IBA);
+	//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBA);
+	//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(IndexArray), IndexArray, GL_STATIC_DRAW);
 
-		return TRUE;
-	}
+	//	NumIndices = 12;
+
+	//	return TRUE;
+	//}
 
 	BOOL InitTextures(void)
 	{
@@ -260,59 +250,61 @@ namespace SHOGL {
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		glEnableVertexAttribArray(2);
-		glEnableVertexAttribArray(3);
+		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
+			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 500.0f)
+			* glm::lookAt(
+				glm::vec3(loc.ex, 0.0f, loc.ez),
+				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), 0.0f - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
+				glm::vec3(0.0f, 1.0f, 0.0));
 
-		glActiveTexture(GL_TEXTURE0);
+		for (int MeshIndex = 0; MeshIndex < NumMeshes; MeshIndex++) {
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBA);
-		glBindBuffer(GL_ARRAY_BUFFER, VBA);
+			glFrontFace(meshes[MeshIndex].Winding);
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)0);
-		glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)12);
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)28);
-		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)40);
+			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * meshes[MeshIndex].model;
+			//glUniformMatrix4fv(WorldLocation, 1, GL_FALSE, &unTransposedWorldMatrix[0][0]);
+			glUniformMatrix4fv(WorldLocation, 1, GL_FALSE, &ThisWorld[0][0]);
 
-		glBindTexture(GL_TEXTURE_2D, TextureMe);
+			glEnableVertexAttribArray(0);
+			glEnableVertexAttribArray(1);
+			glEnableVertexAttribArray(2);
+			glEnableVertexAttribArray(3);
 
-		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+			glActiveTexture(GL_TEXTURE0);
 
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
-		glDisableVertexAttribArray(3);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshes[MeshIndex].IBA);
+			glBindBuffer(GL_ARRAY_BUFFER, meshes[MeshIndex].VBA);
+
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)0);
+			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)12);
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)28);
+			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)40);
+
+			glBindTexture(GL_TEXTURE_2D, TextureMe);
+
+			glDrawElements(GL_TRIANGLES, meshes[MeshIndex].NumIndexes, GL_UNSIGNED_INT, 0);
+
+			glDisableVertexAttribArray(0);
+			glDisableVertexAttribArray(1);
+			glDisableVertexAttribArray(2);
+			glDisableVertexAttribArray(3);
+
+		}
 
 		SwapBuffers(g_hdc);
 
 		return TRUE;
 	}
 
-	BOOL UpdateFrame(HWND hWnd, unsigned int ScreenWidth, unsigned int ScreenHeight)
+	BOOL UpdateFrame(HWND hWnd)
 	{
-		static UserLocation loc = { 0.0f, 0.0f, 0.0f, 20.0f };
-		static float var = 0.0f;
-
-		var += 0.01f;
-
 		ProcessInput(&loc, hWnd);
-		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
-			* glm::perspective(glm::radians(45.0f), (float)ScreenWidth / (float)ScreenHeight, 0.1f, 100.0f)
-			* glm::lookAt(
-				glm::vec3(loc.ex, 0.0f, loc.ez),
-				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), 0.0f - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
-				glm::vec3(0.0f, 1.0f, 0.0))
-			* glm::rotate(glm::radians(var), glm::vec3(0.0f, 1.0f, 0.0f))
-			;
-
-		glUniformMatrix4fv(WorldLocation, 1, GL_FALSE, &unTransposedWorldMatrix[0][0]);
-
 		return TRUE;
 	}
 
 	void Cleanup()
 	{
+		if (meshes != nullptr) free(meshes);
 		if (g_hdc != nullptr) {
 			wglMakeCurrent(g_hdc, nullptr);
 		}
@@ -324,4 +316,63 @@ namespace SHOGL {
 		}
 	}
 
+	BOOL InitGraphicsA(TriangleMeshConfig* configs, int NumConfigs)
+	{
+
+		GLuint *VBAArray = nullptr; 
+		GLuint *IBAArray = nullptr;
+		glmvec12 *GeometryVertices = nullptr;
+		UINT* IndexArray = nullptr;
+
+		meshes = (TriangleMesh*)malloc(NumConfigs * sizeof(TriangleMesh));
+		memset(meshes, 0, NumConfigs * sizeof(TriangleMesh));
+		NumMeshes = NumConfigs;
+
+		VBAArray = (GLuint*)malloc(NumConfigs * sizeof(GLuint));
+		memset(VBAArray, 0, NumConfigs * sizeof(GLuint));
+		glGenBuffers(NumConfigs, VBAArray);
+
+		IBAArray = (GLuint*)malloc(NumConfigs * sizeof(GLuint));
+		memset(IBAArray, 0, NumConfigs * sizeof(GLuint));
+		glGenBuffers(NumConfigs, IBAArray);
+
+		for (int c = 0; c < NumConfigs; c++) {
+
+			TriangleMeshConfig *m = configs + c;
+
+			GeometryVertices = (glmvec12*)malloc(m->NumPositions * sizeof(glmvec12));
+			memset(GeometryVertices, 0, m->NumPositions * sizeof(glmvec12));
+			for (int i = 0; i < m->NumPositions; i++) {
+				GeometryVertices[i].position = m->positions[i];
+				GeometryVertices[i].normal = glm::normalize(m->normals[i]);
+				GeometryVertices[i].color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+				GeometryVertices[i].texture = glm::vec2(0.5f, 0.5f);
+			}
+
+			glBindBuffer(GL_ARRAY_BUFFER, VBAArray[c]);
+			glBufferData(GL_ARRAY_BUFFER, m->NumPositions * sizeof(glmvec12), GeometryVertices, GL_STATIC_DRAW);
+			meshes[c].VBA = VBAArray[c];
+
+			free(GeometryVertices);
+
+			IndexArray = (UINT*)malloc(m->NumIndexes * sizeof(UINT));
+			memset(IndexArray, 0, m->NumIndexes * sizeof(UINT));
+			for (int i = 0; i < m->NumIndexes; i++) IndexArray[i] = m->indexes[i];
+
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBAArray[c]);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->NumIndexes * sizeof(UINT), IndexArray, GL_STATIC_DRAW);
+			meshes[c].IBA = IBAArray[c];
+
+			free(IndexArray);
+
+			meshes[c].NumIndexes = m->NumIndexes;
+			meshes[c].Winding = (m->winding == MeshConfigWinding::Clockwise ? GL_CW : GL_CCW);
+			meshes[c].model = m->model;
+		}
+
+		free(VBAArray);
+		free(IBAArray);
+
+		return TRUE;
+	}
 }

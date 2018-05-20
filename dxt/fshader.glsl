@@ -11,4 +11,5 @@ void main()
 {
 	FragColor = texture2D(gSampler, TexCoord0.xy);
 	//FragColor = Color0;
+	//FragColor = vec4(1,1,1,1);
 }

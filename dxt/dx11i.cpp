@@ -12,8 +12,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/transform.hpp>
 #include <Magick++.h>
-#include "dx11i.h"
 #include "dddcommon.h"
+#include "dx11i.h"
 
 namespace SHDX11 {
 
@@ -494,4 +494,9 @@ namespace SHDX11 {
 		if (lpDevcon) lpDevcon->Release();
 	}
 
+	//BOOL InitGraphicsA(TestMesh* m)
+	//{
+	//	return TRUE;
+	//}
 }
+
