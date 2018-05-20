@@ -1,6 +1,6 @@
 
-//#define USING_DIRECTX11
-#define USING_OPENGL
+#define USING_DIRECTX11
+//#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -104,7 +104,8 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 #ifdef USING_DIRECTX11
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHDX11::InitPipeline()) return 0;
-	if (FALSE == SHDX11::InitGraphicsA(&m)) return 0;
+	if (FALSE == SHDX11::InitGraphics()) return 0;
+	//if (FALSE == SHDX11::InitGraphicsA(&m[0], 1)) return 0;
 	if (FALSE == SHDX11::InitTextures()) return 0;
 #endif
 
@@ -148,7 +149,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 			if (FALSE == SHOGL::RenderFrame()) break;
 #endif
 #ifdef USING_DIRECTX11
-			if (FALSE == SHDX11::UpdateFrame(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT))
+			if (FALSE == SHDX11::UpdateFrame(hWnd))
 				break;
 			if (FALSE == SHDX11::RenderFrame())
 				break;

@@ -23,7 +23,6 @@ namespace SHDX11 {
 	ID3D11RenderTargetView *lpBackbuffer = nullptr;
 	ID3D11VertexShader *lpVS = nullptr;
 	ID3D11PixelShader *lpPS = nullptr;
-	ID3D11Buffer *pVBuffer = nullptr;
 	ID3D11Buffer *pWorldTransformBuffer = nullptr;
 	ID3D11Buffer *pLightInfoBuffer = nullptr;
 	ID3D11InputLayout *pLayout = nullptr;
@@ -34,7 +33,18 @@ namespace SHDX11 {
 	ID3D11ShaderResourceView *pTextureResView = nullptr;
 	ID3D11SamplerState *pSamplerState = nullptr;
 
+	struct VertexBufferContext {
+		ID3D11Buffer *lpVertexBuffer = nullptr;
+		ID3D11Buffer *lpIndexBuffer = nullptr;
+		UINT NumIndexes = 0;
+		glm::mat4x4 model;
+	};
+	VertexBufferContext* VertexBufferContexts = nullptr;
+	UINT NumVertexBuffers = 0;
+
 	struct VERTEX2 { glm::vec3 pos; glm::vec4 clr; glm::vec3 nrml; glm::vec2 texc; };    // a struct to define a vertex
+
+	unsigned int gScreenWidth = 0, gScreenHeight = 0;
 
 	struct VREND_CONST_BUFFER1
 	{
@@ -53,6 +63,9 @@ namespace SHDX11 {
 	{
 		DXGI_SWAP_CHAIN_DESC sc;
 		ZeroMemory(&sc, sizeof(DXGI_SWAP_CHAIN_DESC));
+
+		gScreenWidth = ScreenWidth;
+		gScreenHeight = ScreenHeight;
 
 		sc.BufferCount = 1;
 		sc.BufferDesc.Height = ScreenHeight;
@@ -184,7 +197,7 @@ namespace SHDX11 {
 	BOOL InitPipeline(void)
 	{
 		// load and compile the two shaders
-		ID3D10Blob* VS = nullptr;
+		ID3D1Blob* VS = nullptr;
 		ID3D10Blob* PS = nullptr;
 		ID3D10Blob* pErrs = nullptr;
 		char *sCode = nullptr;
@@ -233,10 +246,68 @@ namespace SHDX11 {
 		return TRUE;
 	}
 
+	BOOL CreateShaderConstants()
+	{
+		VREND_CONST_BUFFER1 rcBuffer1;
+		rcBuffer1.WorldMatrix = glm::mat4x4(1.0f);
+
+		D3D11_BUFFER_DESC rcBufferDesc;
+		rcBufferDesc.ByteWidth = sizeof(VREND_CONST_BUFFER1);
+		rcBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		rcBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		rcBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		rcBufferDesc.MiscFlags = 0;
+		rcBufferDesc.StructureByteStride = 0;
+
+		// Create the buffer.
+		if (FAILED(lpDev->CreateBuffer(&rcBufferDesc, nullptr, &pWorldTransformBuffer))) return FALSE;
+
+		// Set the buffer.
+		D3D11_MAPPED_SUBRESOURCE ms;
+		if (FAILED(lpDevcon->Map(pWorldTransformBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
+		memcpy(ms.pData, &rcBuffer1, sizeof(VREND_CONST_BUFFER1));
+		lpDevcon->Unmap(pWorldTransformBuffer, NULL);
+
+		lpDevcon->VSSetConstantBuffers(0, 1, &pWorldTransformBuffer);
+
+		// pixel shader const buffer
+		//PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
+		PREND_CONST_BUFFER PixelRendererConstBuffer;
+		PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f));
+		PixelRendererConstBuffer.f4LightAmbient = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+		PixelRendererConstBuffer.f4LightDiffuse = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		PixelRendererConstBuffer.f1 = 0.0f;
+
+		D3D11_BUFFER_DESC PixelRendererConstBufferDesc;
+		PixelRendererConstBufferDesc.ByteWidth = sizeof(PREND_CONST_BUFFER);
+		PixelRendererConstBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		PixelRendererConstBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		PixelRendererConstBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		PixelRendererConstBufferDesc.MiscFlags = 0;
+		PixelRendererConstBufferDesc.StructureByteStride = 0;
+
+		// Create the buffer.
+		if (FAILED(lpDev->CreateBuffer(&PixelRendererConstBufferDesc, nullptr, &pLightInfoBuffer))) return false;
+
+		// Set the buffer.
+		if (FAILED(lpDevcon->Map(pLightInfoBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
+		memcpy(ms.pData, &PixelRendererConstBuffer, sizeof(PREND_CONST_BUFFER));
+		lpDevcon->Unmap(pLightInfoBuffer, NULL);
+
+		lpDevcon->PSSetConstantBuffers(1, 1, &pLightInfoBuffer);
+
+		return TRUE;
+	}
+
 	BOOL InitGraphics()
 	{
 		D3D11_BUFFER_DESC VertexBufferDescriptor;
-		D3D11_MAPPED_SUBRESOURCE ms;
+		
+
+		VertexBufferContexts = (VertexBufferContext*)malloc(sizeof(VertexBufferContext));
+		ZeroMemory(VertexBufferContexts, sizeof(VertexBufferContext));
+		NumVertexBuffers = 1;
+
 		// create a triangle using the VERTEX struct
 		// windind is CW
 		VERTEX2 GeometryVertices[] =
@@ -259,10 +330,6 @@ namespace SHDX11 {
 			{ glm::vec3(10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f) }
 
 		};
-		VREND_CONST_BUFFER1 rcBuffer1;
-		D3D11_BUFFER_DESC rcBufferDesc;
-		PREND_CONST_BUFFER PixelRendererConstBuffer;
-		D3D11_BUFFER_DESC PixelRendererConstBufferDesc;
 
 		// create the vertex buffer
 		ZeroMemory(&VertexBufferDescriptor, sizeof(VertexBufferDescriptor));
@@ -272,59 +339,81 @@ namespace SHDX11 {
 		VertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;       // use as a vertex buffer
 		VertexBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // allow CPU to write in buffer
 
-		if (FAILED(lpDev->CreateBuffer(&VertexBufferDescriptor, NULL, &pVBuffer))) return FALSE;
+		if (FAILED(lpDev->CreateBuffer(&VertexBufferDescriptor, NULL, &VertexBufferContexts[0].lpVertexBuffer))) return FALSE;
 
 		// copy the vertices into the buffer
-		if (FAILED(lpDevcon->Map(pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
+		D3D11_MAPPED_SUBRESOURCE ms;
+		if (FAILED(lpDevcon->Map(VertexBufferContexts[0].lpVertexBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
 		memcpy(ms.pData, GeometryVertices, sizeof(GeometryVertices));                 // copy the data
-		lpDevcon->Unmap(pVBuffer, NULL);                                      // unmap the buffer
+		lpDevcon->Unmap(VertexBufferContexts[0].lpVertexBuffer, NULL);                                      // unmap the buffer
 
 
-																			  // create an identiy matrix
-		rcBuffer1.WorldMatrix = glm::mat4x4(1.0f);
+		unsigned int Indices[] = {
+			0, 1, 2, 3, 4, 5,
+			6, 7, 8, 9, 10, 11
+		};
 
-		rcBufferDesc.ByteWidth = sizeof(VREND_CONST_BUFFER1);
-		rcBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		rcBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		rcBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		rcBufferDesc.MiscFlags = 0;
-		rcBufferDesc.StructureByteStride = 0;
+		D3D11_BUFFER_DESC IndexBufferDescriptor;
+		ZeroMemory(&IndexBufferDescriptor, sizeof(D3D11_BUFFER_DESC));
+		IndexBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;                // write access access by CPU and GPU
+		IndexBufferDescriptor.ByteWidth = sizeof(unsigned int) * 12;
+		IndexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;       // use as a vertex buffer
+		IndexBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // allow CPU to write in buffer
+		
+		if (FAILED(lpDev->CreateBuffer(&IndexBufferDescriptor, NULL, &VertexBufferContexts[0].lpIndexBuffer))) return FALSE;
 
-		// Create the buffer.
-		if (FAILED(lpDev->CreateBuffer(&rcBufferDesc, nullptr, &pWorldTransformBuffer))) return FALSE;
+		if (FAILED(lpDevcon->Map(VertexBufferContexts[0].lpIndexBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
+		memcpy(ms.pData, Indices, sizeof(unsigned int) * 12);
+		lpDevcon->Unmap(VertexBufferContexts[0].lpIndexBuffer, NULL);                                      // unmap the buffer
 
-		// Set the buffer.
-		if (FAILED(lpDevcon->Map(pWorldTransformBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
-		memcpy(ms.pData, &rcBuffer1, sizeof(VREND_CONST_BUFFER1));
-		lpDevcon->Unmap(pWorldTransformBuffer, NULL);
+		VertexBufferContexts[0].NumIndexes = 12;
 
-		lpDevcon->VSSetConstantBuffers(0, 1, &pWorldTransformBuffer);
+		
 
-		// pixel shader const buffer
-		//PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
-		PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f));
-		PixelRendererConstBuffer.f4LightAmbient = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-		PixelRendererConstBuffer.f4LightDiffuse = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		PixelRendererConstBuffer.f1 = 0.0f;
+		return CreateShaderConstants();
+	}
 
-		PixelRendererConstBufferDesc.ByteWidth = sizeof(PREND_CONST_BUFFER);
-		PixelRendererConstBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		PixelRendererConstBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		PixelRendererConstBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		PixelRendererConstBufferDesc.MiscFlags = 0;
-		PixelRendererConstBufferDesc.StructureByteStride = 0;
+	BOOL InitGraphicsA(DDDCOMMON::TriangleMeshConfig* configs, int NumConfigs)
+	{
 
-		// Create the buffer.
-		if (FAILED(lpDev->CreateBuffer(&PixelRendererConstBufferDesc, nullptr, &pLightInfoBuffer))) return false;
+		VertexBufferContexts = (VertexBufferContext*)malloc(NumConfigs * sizeof(VertexBufferContext));
+		ZeroMemory(VertexBufferContexts, sizeof(NumConfigs * sizeof(VertexBufferContext)));
+		NumVertexBuffers = NumConfigs;
 
-		// Set the buffer.
-		if (FAILED(lpDevcon->Map(pLightInfoBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
-		memcpy(ms.pData, &PixelRendererConstBuffer, sizeof(PREND_CONST_BUFFER));
-		lpDevcon->Unmap(pLightInfoBuffer, NULL);
+		for (UINT c = 0; c < NumConfigs; c++) {
 
-		lpDevcon->PSSetConstantBuffers(1, 1, &pLightInfoBuffer);
+			// create the vertex data
+			VERTEX2 *lpGeometryVertices = nullptr;
+			lpGeometryVertices = (VERTEX2*)malloc(configs[c].NumPositions * sizeof(VERTEX2));
+			for (UINT p = 0; p < configs[c].NumPositions; p++) {
+				lpGeometryVertices[p].pos = configs[c].positions[p];
+				lpGeometryVertices[p].nrml = configs[c].normals[p];
+				lpGeometryVertices[p].clr = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+				lpGeometryVertices[p].texc = glm::vec2(0.5f, 0.5f);
+			}
 
-		return TRUE;
+			// create the vertex buffer
+			D3D11_BUFFER_DESC VertexBufferDescriptor;
+			ZeroMemory(&VertexBufferDescriptor, sizeof(VertexBufferDescriptor));
+			VertexBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;
+			VertexBufferDescriptor.ByteWidth = sizeof(VERTEX2) * configs[c].NumPositions;
+			VertexBufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			VertexBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			if (FAILED(lpDev->CreateBuffer(&VertexBufferDescriptor, NULL, &VertexBufferContexts[c].lpVertexBuffer))) return FALSE;
+
+			// copy the data to the buffer
+			D3D11_MAPPED_SUBRESOURCE ms;
+			if (FAILED(lpDevcon->Map(VertexBufferContexts[c].lpVertexBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
+			memcpy(ms.pData, lpGeometryVertices, configs[c].NumPositions * sizeof(VERTEX2));
+			lpDevcon->Unmap(VertexBufferContexts[c].lpVertexBuffer, NULL);
+
+			VertexBufferContexts[c].model = configs[c].model;
+
+			free(lpGeometryVertices);
+
+		}
+
+		return CreateShaderConstants();
 	}
 
 	BOOL InitTextures()
@@ -422,7 +511,7 @@ namespace SHDX11 {
 		return TRUE;
 	}
 
-	BOOL UpdateFrame(HWND hWnd, unsigned int ScreenWidth, unsigned int ScreenHeight)
+	BOOL UpdateFrame(HWND hWnd)
 	{
 		VREND_CONST_BUFFER1 rcBuffer1;
 		D3D11_MAPPED_SUBRESOURCE ms;
@@ -433,7 +522,7 @@ namespace SHDX11 {
 
 		DDDCOMMON::ProcessInput(&loc, hWnd);
 		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
-			* glm::perspective(glm::radians(45.0f), (float)ScreenWidth / (float)ScreenHeight, 0.1f, 100.0f)
+			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 100.0f)
 			* glm::lookAt(
 				glm::vec3(loc.ex, 0.0f, loc.ez),
 				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), 0.0f - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
@@ -459,13 +548,17 @@ namespace SHDX11 {
 		// select which vertex buffer to display
 		UINT stride = sizeof(VERTEX2);
 		UINT offset = 0;
-		lpDevcon->IASetVertexBuffers(0, 1, &pVBuffer, &stride, &offset);
 
-		// select which primtive type we are using
-		lpDevcon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		for (int vi = 0; vi < NumVertexBuffers; vi++) {
+			lpDevcon->IASetVertexBuffers(0, 1, &VertexBufferContexts[vi].lpVertexBuffer, &stride, &offset);
+			lpDevcon->IASetIndexBuffer(VertexBufferContexts[vi].lpIndexBuffer, DXGI_FORMAT_R8G8B8A8_UINT, 0);
 
-		// draw the vertex buffer to the back buffer
-		lpDevcon->Draw(12, 0);
+			// select which primtive type we are using
+			lpDevcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			// draw the vertex buffer to the back buffer
+			lpDevcon->DrawIndexed(VertexBufferContexts[vi].NumIndexes, 0, 0);
+		}
 
 		// switch the back buffer and the front buffer
 		if (FAILED(lpSwapchain->Present(0, 0))) return FALSE;
@@ -483,7 +576,15 @@ namespace SHDX11 {
 		if (pDSState) pDSState->Release();
 		if (pDepthStencil) pDepthStencil->Release();
 		if (pLayout) pLayout->Release();
-		if (pVBuffer) pVBuffer->Release();
+		if (VertexBufferContexts) {
+			for (int i = 0; i < NumVertexBuffers; i++) {
+				if(VertexBufferContexts[i].lpVertexBuffer)
+					VertexBufferContexts[i].lpVertexBuffer->Release();
+				if (VertexBufferContexts[i].lpIndexBuffer)
+					VertexBufferContexts[i].lpIndexBuffer->Release();
+			}
+			free(VertexBufferContexts);
+		}
 		if (pWorldTransformBuffer) pWorldTransformBuffer->Release();
 		if (pLightInfoBuffer) pLightInfoBuffer->Release();
 		if (lpVS) lpVS->Release();
@@ -494,9 +595,5 @@ namespace SHDX11 {
 		if (lpDevcon) lpDevcon->Release();
 	}
 
-	//BOOL InitGraphicsA(TestMesh* m)
-	//{
-	//	return TRUE;
-	//}
 }
 
