@@ -13,9 +13,12 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <fx/gltf.h>
 #include "dddcommon.h"
 #include "dx11i.h"
 #include "opengli.h"
+
+#include <glm/vec3.hpp>
 
 // define the screen resolution
 #define SCREEN_WIDTH  640
@@ -23,6 +26,99 @@
 
 LARGE_INTEGER pFreq;
 LARGE_INTEGER pLast;
+
+void TestLoadGlb()
+{
+	std::ofstream dbg("c:\\temp\\glb_debug.txt");
+	dbg << "opening file" << std::endl;
+	fx::gltf::Document cloud = fx::gltf::LoadFromBinary("c:\\temp\\cloud.glb");
+
+	dbg << "meshes " << cloud.meshes.size() << std::endl;
+	for (std::vector<fx::gltf::Mesh>::iterator mi = cloud.meshes.begin(); mi != cloud.meshes.end(); ++mi) {
+		// a mesh has primitives
+		dbg << mi->name << std::endl;
+		for (std::vector<fx::gltf::Primitive>::iterator pi = mi->primitives.begin(); pi != mi->primitives.end(); ++pi) {
+			// a primitive has attributes
+			fx::gltf::Attributes attrs = pi->attributes;
+			dbg << "num attrs " << attrs.size() << std::endl;
+			for (std::pair<std::string, uint32_t> element : attrs) 
+			{
+				dbg << "=== ACCESSOR ===" << std::endl;
+				dbg << "=== " << element.first << " = " << element.second << " ===" << std::endl;
+				fx::gltf::Accessor ia = cloud.accessors.at(element.second);
+				dbg << "acc index count " << ia.count << std::endl;
+				dbg << "acc type " << (int)ia.type << std::endl;
+				dbg << "acc comp type " << (int)ia.componentType << std::endl;
+				dbg << "acc normalized " << ia.normalized << std::endl;
+				// vec3 floats
+				dbg << "acc buffer view " << ia.bufferView << std::endl;
+				dbg << "acc byte offset " << ia.byteOffset << std::endl;
+				dbg << "acc count " << ia.count << std::endl;
+
+				fx::gltf::BufferView bv = cloud.bufferViews.at(ia.bufferView);
+				dbg << "bv buffer " << bv.buffer << std::endl;
+				dbg << "bv offset " << bv.byteOffset << std::endl;
+				dbg << "bv byte length " << bv.byteLength << std::endl;
+				dbg << "bv stride " << bv.byteStride << std::endl;
+
+				fx::gltf::Buffer bfr = cloud.buffers.at(bv.buffer);
+				glm::vec3* usbuffer = (glm::vec3*)malloc(bv.byteLength);
+				memset(usbuffer, 0, bv.byteLength);
+				memcpy(usbuffer, &bfr.data.at(bv.byteOffset), bv.byteLength);
+				for (unsigned int x = 0; x < ia.count; x++) {
+					dbg << usbuffer[x].r << ", " << usbuffer[x].g << ", " << usbuffer[x].b << std::endl;
+				}
+
+			}
+			// a primitive has indices
+			dbg << "=== INDICES ===" << std::endl;
+			dbg << "indices index " << pi->indices << std::endl;
+			fx::gltf::Accessor ia = cloud.accessors.at(pi->indices);
+			dbg << "=== ACCESSOR ===" << std::endl;
+			dbg << "acc index count " << ia.count << std::endl;
+			//None, 0
+			//Scalar, 1
+			//Vec2, 2
+			//Vec3, 3
+			//Vec4, 4
+			//Mat2, 5
+			//Mat3, 6
+			//Mat4 7
+			// scalar type 1
+			dbg << "acc type " << (int)ia.type << std::endl;
+			//None = 0,
+			//Byte = 5120,
+			//UnsignedByte = 5121,
+			//Short = 5122,
+			//UnsignedShort = 5123,
+			//UnsignedInt = 5125,
+			//Float = 5126
+			// this is an unsigned short
+			dbg << "acc comp type " << (int)ia.componentType << std::endl;
+			dbg << "acc normalized " << ia.normalized << std::endl;
+			dbg << "acc buffer view " << ia.bufferView << std::endl;
+			dbg << "acc byte offset " << ia.byteOffset << std::endl;
+			dbg << "acc count " << ia.count << std::endl;
+			fx::gltf::BufferView bv = cloud.bufferViews.at(ia.bufferView);
+			dbg << "bv buffer " << bv.buffer << std::endl;
+			dbg << "bv offset " << bv.byteOffset << std::endl;
+			dbg << "bv byte length " << bv.byteLength << std::endl;
+			dbg << "bv stride " << bv.byteStride << std::endl;
+
+			fx::gltf::Buffer bfr = cloud.buffers.at(bv.buffer);
+			unsigned short * usbuffer = (unsigned short*)malloc(bv.byteLength);
+			memset(usbuffer, 0, bv.byteLength);
+			memcpy(usbuffer, &bfr.data.at(bv.byteOffset), bv.byteLength);
+			for (unsigned int x = 0; x < ia.count; x++) {
+				dbg << usbuffer[x] << std::endl;
+			}
+			free(usbuffer);
+
+		}
+	}
+
+	dbg << "done" << std::endl;
+}
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -44,6 +140,9 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 
 	LARGE_INTEGER pThisTime;
 	char TitleText[256];
+
+	TestLoadGlb();
+	if (true) return 0;
 
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;

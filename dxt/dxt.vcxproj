@@ -78,7 +78,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Library\glm;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\glew-2.1.0\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\glm;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\glew-2.1.0\include;C:\Library\fx-gltf\include;C:\Library\json\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -98,7 +98,7 @@ copy "$(ProjectDir)vshader.glsl" "$(OutputPath)"</Command>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Library\glm;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\glew-2.1.0\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\glm;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\glew-2.1.0\include;C:\Library\fx-gltf\include;C:\Library\json\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <PostBuildEvent>
@@ -116,7 +116,7 @@ copy "$(ProjectDir)vshader.glsl" "$(OutputPath)"</Command>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Library\glm;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\glew-2.1.0\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\glm;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\glew-2.1.0\include;C:\Library\fx-gltf\include;C:\Library\json\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <PostBuildEvent>
@@ -136,7 +136,7 @@ copy "$(ProjectDir)vshader.glsl" "$(OutputPath)"</Command>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Library\glm;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\glew-2.1.0\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Library\glm;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick\Magick++\lib;C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\ImageMagick;C:\Library\glew-2.1.0\include;C:\Library\fx-gltf\include;C:\Library\json\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
