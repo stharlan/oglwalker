@@ -1,35 +1,41 @@
 #pragma once
 
-struct UserLocation {
-	float azimuth;
-	float elevation;
-	float ex;
-	float ez;
-};
+namespace DDDCOMMON {
 
-enum MeshConfigWinding {
-	Clockwise,
-	CounterClockwise
-};
+	struct UserLocation {
+		float azimuth;
+		float elevation;
+		float ex;
+		float ez;
+	};
 
-struct TriangleMeshConfig {
-	glm::vec3 *positions = nullptr;
-	UINT NumPositions = 0;
-	glm::vec3 *normals = nullptr;
-	UINT NumNormals = 0;
-	USHORT *indexes = nullptr;
-	UINT NumIndexes = 0;
-	MeshConfigWinding winding;
-	glm::mat4x4 model;
-};
+	enum MeshConfigWinding {
+		Clockwise,
+		CounterClockwise
+	};
 
-BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);
-void ProcessInput(UserLocation* pLoc, HWND hWnd);
-void CleanupDirectInput();
-char* ReadTextFile(const char* filename, size_t* filesize);
+	struct TriangleMeshConfig {
+		glm::vec3 *positions = nullptr;
+		UINT NumPositions = 0;
+		glm::vec3 *normals = nullptr;
+		UINT NumNormals = 0;
+		USHORT *indexes = nullptr;
+		UINT NumIndexes = 0;
+		MeshConfigWinding winding;
+		glm::mat4x4 model;
+	};
 
-//BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);
-//void CleanupDirectInput();
-//bool ReadKeyboardState(unsigned char* keystate);
-//bool ReadMouseState(DIMOUSESTATE *pMouseState);
-//void ProcessInput(UserLocation* pLoc);
+	BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);
+	void ProcessInput(UserLocation* pLoc, HWND hWnd);
+	void CleanupDirectInput();
+	char* ReadTextFile(const char* filename, size_t* filesize);
+	void LoadTriangleMeshFromGLB(const char* filename, TriangleMeshConfig *m);
+	void CleanupTriangleMeshConfig(TriangleMeshConfig* c);
+
+	//BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);
+	//void CleanupDirectInput();
+	//bool ReadKeyboardState(unsigned char* keystate);
+	//bool ReadMouseState(DIMOUSESTATE *pMouseState);
+	//void ProcessInput(UserLocation* pLoc);
+
+}

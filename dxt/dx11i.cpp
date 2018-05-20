@@ -197,7 +197,7 @@ namespace SHDX11 {
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 		};
 
-		sCode = ReadTextFile("shaders.hlsl", &sSize);
+		sCode = DDDCOMMON::ReadTextFile("shaders.hlsl", &sSize);
 
 		if (!sCode) return FALSE;
 
@@ -426,12 +426,12 @@ namespace SHDX11 {
 	{
 		VREND_CONST_BUFFER1 rcBuffer1;
 		D3D11_MAPPED_SUBRESOURCE ms;
-		static UserLocation loc = { 0.0f, 0.0f, 0.0f, 20.0f };
+		static DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 20.0f };
 		static float var = 0.0f;
 
 		var += 0.01f;
 
-		ProcessInput(&loc, hWnd);
+		DDDCOMMON::ProcessInput(&loc, hWnd);
 		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
 			* glm::perspective(glm::radians(45.0f), (float)ScreenWidth / (float)ScreenHeight, 0.1f, 100.0f)
 			* glm::lookAt(

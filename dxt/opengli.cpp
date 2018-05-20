@@ -44,7 +44,7 @@ namespace SHOGL {
 		glm::vec2 texture;
 	} glmvec12;
 
-	UserLocation loc = { 0.0f, 0.0f, 0.0f, 0.0f };
+	DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	unsigned int gScreenWidth = 0, gScreenHeight = 0;
 
@@ -144,13 +144,13 @@ namespace SHOGL {
 
 		if (ShaderProgram == 0) return FALSE;
 
-		sourceCode = ReadTextFile(vsFilename, &sourceSize);
+		sourceCode = DDDCOMMON::ReadTextFile(vsFilename, &sourceSize);
 		if (FALSE == AddShader(ShaderProgram, sourceCode, GL_VERTEX_SHADER)) {
 			free(sourceCode);
 			return FALSE;
 		}
 
-		sourceCode = ReadTextFile(fsFilename, &sourceSize);
+		sourceCode = DDDCOMMON::ReadTextFile(fsFilename, &sourceSize);
 		if (FALSE == AddShader(ShaderProgram, sourceCode, GL_FRAGMENT_SHADER)) {
 			free(sourceCode);
 			return FALSE;
@@ -316,7 +316,7 @@ namespace SHOGL {
 		}
 	}
 
-	BOOL InitGraphicsA(TriangleMeshConfig* configs, int NumConfigs)
+	BOOL InitGraphicsA(DDDCOMMON::TriangleMeshConfig* configs, int NumConfigs)
 	{
 
 		GLuint *VBAArray = nullptr; 
@@ -338,7 +338,7 @@ namespace SHOGL {
 
 		for (int c = 0; c < NumConfigs; c++) {
 
-			TriangleMeshConfig *m = configs + c;
+			DDDCOMMON::TriangleMeshConfig *m = configs + c;
 
 			GeometryVertices = (glmvec12*)malloc(m->NumPositions * sizeof(glmvec12));
 			memset(GeometryVertices, 0, m->NumPositions * sizeof(glmvec12));
@@ -366,7 +366,7 @@ namespace SHOGL {
 			free(IndexArray);
 
 			meshes[c].NumIndexes = m->NumIndexes;
-			meshes[c].Winding = (m->winding == MeshConfigWinding::Clockwise ? GL_CW : GL_CCW);
+			meshes[c].Winding = (m->winding == DDDCOMMON::MeshConfigWinding::Clockwise ? GL_CW : GL_CCW);
 			meshes[c].model = m->model;
 		}
 

@@ -14,7 +14,6 @@
 
 #include <windows.h>
 #include <stdio.h>
-#include <fx/gltf.h>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/transform.hpp>
@@ -29,109 +28,6 @@
 LARGE_INTEGER pFreq;
 LARGE_INTEGER pLast;
 
-void TestLoadGlb(TriangleMeshConfig *m)
-{
-	std::ofstream dbg("c:\\temp\\glb_debug.txt");
-	dbg << "opening file" << std::endl;
-	fx::gltf::Document cloud = fx::gltf::LoadFromBinary("c:\\temp\\cloud.glb");
-
-	dbg << "meshes " << cloud.meshes.size() << std::endl;
-	for (std::vector<fx::gltf::Mesh>::iterator mi = cloud.meshes.begin(); mi != cloud.meshes.end(); ++mi) {
-		// a mesh has primitives
-		dbg << mi->name << std::endl;
-		for (std::vector<fx::gltf::Primitive>::iterator pi = mi->primitives.begin(); pi != mi->primitives.end(); ++pi) {
-			// a primitive has attributes
-			fx::gltf::Attributes attrs = pi->attributes;
-			dbg << "num attrs " << attrs.size() << std::endl;
-			for (std::pair<std::string, uint32_t> element : attrs) 
-			{
-				dbg << "=== ACCESSOR ===" << std::endl;
-				dbg << "=== " << element.first << " = " << element.second << " ===" << std::endl;
-				fx::gltf::Accessor ia = cloud.accessors.at(element.second);
-				dbg << "acc index count " << ia.count << std::endl;
-				dbg << "acc type " << (int)ia.type << std::endl;
-				dbg << "acc comp type " << (int)ia.componentType << std::endl;
-				dbg << "acc normalized " << ia.normalized << std::endl;
-				// vec3 floats
-				dbg << "acc buffer view " << ia.bufferView << std::endl;
-				dbg << "acc byte offset " << ia.byteOffset << std::endl;
-				dbg << "acc count " << ia.count << std::endl;
-
-				fx::gltf::BufferView bv = cloud.bufferViews.at(ia.bufferView);
-				dbg << "bv buffer " << bv.buffer << std::endl;
-				dbg << "bv offset " << bv.byteOffset << std::endl;
-				dbg << "bv byte length " << bv.byteLength << std::endl;
-				dbg << "bv stride " << bv.byteStride << std::endl;
-
-				fx::gltf::Buffer bfr = cloud.buffers.at(bv.buffer);
-				glm::vec3* usbuffer = (glm::vec3*)malloc(bv.byteLength);
-				memset(usbuffer, 0, bv.byteLength);
-				memcpy(usbuffer, &bfr.data.at(bv.byteOffset), bv.byteLength);
-				for (unsigned int x = 0; x < ia.count; x++) {
-					dbg << usbuffer[x].r << ", " << usbuffer[x].g << ", " << usbuffer[x].b << std::endl;
-				}
-
-				if (element.first.compare("NORMAL") == 0) {
-					m->NumNormals = ia.count;
-					m->normals = usbuffer;
-				}
-				else if (element.first.compare("POSITION") == 0) {
-					m->NumPositions = ia.count;
-					m->positions = usbuffer;
-				}
-
-			}
-			// a primitive has indices
-			dbg << "=== INDICES ===" << std::endl;
-			dbg << "indices index " << pi->indices << std::endl;
-			fx::gltf::Accessor ia = cloud.accessors.at(pi->indices);
-			dbg << "=== ACCESSOR ===" << std::endl;
-			dbg << "acc index count " << ia.count << std::endl;
-			//None, 0
-			//Scalar, 1
-			//Vec2, 2
-			//Vec3, 3
-			//Vec4, 4
-			//Mat2, 5
-			//Mat3, 6
-			//Mat4 7
-			// scalar type 1
-			dbg << "acc type " << (int)ia.type << std::endl;
-			//None = 0,
-			//Byte = 5120,
-			//UnsignedByte = 5121,
-			//Short = 5122,
-			//UnsignedShort = 5123,
-			//UnsignedInt = 5125,
-			//Float = 5126
-			// this is an unsigned short
-			dbg << "acc comp type " << (int)ia.componentType << std::endl;
-			dbg << "acc normalized " << ia.normalized << std::endl;
-			dbg << "acc buffer view " << ia.bufferView << std::endl;
-			dbg << "acc byte offset " << ia.byteOffset << std::endl;
-			dbg << "acc count " << ia.count << std::endl;
-			fx::gltf::BufferView bv = cloud.bufferViews.at(ia.bufferView);
-			dbg << "bv buffer " << bv.buffer << std::endl;
-			dbg << "bv offset " << bv.byteOffset << std::endl;
-			dbg << "bv byte length " << bv.byteLength << std::endl;
-			dbg << "bv stride " << bv.byteStride << std::endl;
-
-			fx::gltf::Buffer bfr = cloud.buffers.at(bv.buffer);
-			unsigned short * usbuffer = (unsigned short*)malloc(bv.byteLength);
-			memset(usbuffer, 0, bv.byteLength);
-			memcpy(usbuffer, &bfr.data.at(bv.byteOffset), bv.byteLength);
-			for (unsigned int x = 0; x < ia.count; x++) {
-				dbg << usbuffer[x] << std::endl;
-			}
-			
-			m->NumIndexes = ia.count;
-			m->indexes = usbuffer;
-
-		}
-	}
-
-	dbg << "done" << std::endl;
-}
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -154,21 +50,16 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	LARGE_INTEGER pThisTime;
 	char TitleText[256];
 
-	TriangleMeshConfig m;
-	TestLoadGlb(&m);
-	m.winding = MeshConfigWinding::CounterClockwise;
-	// SRT scale rotate translate (opposite multiply?)
-	m.model = glm::mat4x4(1.0f) 
-		* glm::translate(glm::vec3(0.0f, 10.0f, -50.0f))
-		* glm::scale(glm::vec3(10.0f, 10.0f, 10.0f));
-	
-	assert(m.indexes != nullptr);
-	assert(m.NumIndexes > 0);
-	assert(m.normals != nullptr);
-	assert(m.NumNormals > 0);
-	assert(m.positions != nullptr);
-	assert(m.NumPositions > 0);
+	DDDCOMMON::TriangleMeshConfig m[2];
+	memset(&m[0], 0, 2 * sizeof(DDDCOMMON::TriangleMeshConfig));
+	DDDCOMMON::LoadTriangleMeshFromGLB("c:\\temp\\cat.glb", &m[0]);
 
+	m[0].winding = DDDCOMMON::MeshConfigWinding::CounterClockwise;
+	// SRT scale rotate translate (opposite multiply?)
+	m[0].model = glm::mat4x4(1.0f) 
+		* glm::translate(glm::vec3(0.0f, 0.0f, -50.0f))
+		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f));
+	
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
 	wcex.cbSize = sizeof(WNDCLASSEX);
@@ -202,11 +93,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 
 	if (!hWnd) return 0;
 
-	if (FALSE == SetupDirectInput(hInst, hWnd)) return 0;
+	if (FALSE == DDDCOMMON::SetupDirectInput(hInst, hWnd)) return 0;
 #ifdef USING_OPENGL
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
-	if (FALSE == SHOGL::InitGraphicsA(&m, 1)) return 0;
+	if (FALSE == SHOGL::InitGraphicsA(&m[0], 1)) return 0;
 	//if (FALSE == SHOGL::InitGraphics()) return 0;
 	if (FALSE == SHOGL::InitTextures()) return 0;
 #endif
@@ -216,6 +107,9 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	if (FALSE == SHDX11::InitGraphicsA(&m)) return 0;
 	if (FALSE == SHDX11::InitTextures()) return 0;
 #endif
+
+	DDDCOMMON::CleanupTriangleMeshConfig(&m[0]);
+	DDDCOMMON::CleanupTriangleMeshConfig(&m[1]);
 
 	QueryPerformanceFrequency(&pFreq);
 	QueryPerformanceCounter(&pLast);
@@ -263,17 +157,13 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	}
 
 	ShowCursor(TRUE);
-	CleanupDirectInput();
+	DDDCOMMON::CleanupDirectInput();
 #ifdef USING_OPENGL
 	SHOGL::Cleanup();
 #endif
 #ifdef USING_DIRECTX11
 	SHDX11::Cleanup();
 #endif
-
-	free(m.indexes);
-	free(m.normals);
-	free(m.positions);
 
 	return 0;
 }
