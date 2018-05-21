@@ -1,6 +1,6 @@
 
-#define USING_DIRECTX11
-//#define USING_OPENGL
+//#define USING_DIRECTX11
+#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -60,6 +60,28 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 		* glm::translate(glm::vec3(0.0f, 0.0f, -20.0f))
 		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f));
 	
+	glm::vec3 positions[] = {
+		glm::vec3(-20, -2, -20),
+		glm::vec3(20, -2, -20),
+		glm::vec3(20, -2, 20),
+		glm::vec3(-20, -2, 20)
+	};
+	glm::vec3 normals[] = {
+		glm::vec3(0, 1, 0),
+		glm::vec3(0, 1, 0),
+		glm::vec3(0, 1, 0),
+		glm::vec3(0, 1, 0)
+	};
+	unsigned short indexes[] = { 0, 1, 3, 1, 2, 3 };
+	m[1].indexes = indexes;
+	m[1].model = glm::mat4x4(1.0f);
+	m[1].normals = normals;
+	m[1].NumIndexes = 6;
+	m[1].NumNormals = 4;
+	m[1].NumPositions = 4;
+	m[1].positions = positions;
+	m[1].winding = DDDCOMMON::MeshConfigWinding::Clockwise;
+
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
 	wcex.cbSize = sizeof(WNDCLASSEX);
@@ -97,19 +119,19 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 #ifdef USING_OPENGL
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
-	if (FALSE == SHOGL::InitGraphicsA(&m[0], 1)) return 0;
+	if (FALSE == SHOGL::InitGraphicsA(&m[0], 2)) return 0;
 	if (FALSE == SHOGL::InitTextures()) return 0;
 #endif
 #ifdef USING_DIRECTX11
 	DDDCOMMON::ReverseWinding(&m[0]);
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHDX11::InitPipeline()) return 0;
-	if (FALSE == SHDX11::InitGraphicsA(&m[0], 1)) return 0;
+	if (FALSE == SHDX11::InitGraphicsA(&m[0], 2)) return 0;
 	if (FALSE == SHDX11::InitTextures()) return 0;
 #endif
 
 	DDDCOMMON::CleanupTriangleMeshConfig(&m[0]);
-	DDDCOMMON::CleanupTriangleMeshConfig(&m[1]);
+	//DDDCOMMON::CleanupTriangleMeshConfig(&m[1]);
 
 	QueryPerformanceFrequency(&pFreq);
 	QueryPerformanceCounter(&pLast);
