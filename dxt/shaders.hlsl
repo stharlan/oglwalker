@@ -49,10 +49,14 @@ float4 PShader(float4 position : SV_POSITION, float4 color : COLOR, float3 norma
 	//finalColor += saturate(dot(f3LightDir, normal) * f4LightDiffuse * color);
 	//return finalColor;
 
-	//float4 texColor = g_Texture2D.Sample(TextureSampler, texcoord);
-	//float4 finalColor = texColor * f4LightAmbient;
-	//finalColor += saturate(dot(f3LightDir, normal) * f4LightDiffuse * texColor);
-	//return finalColor;
+	float4 texColor = g_Texture2D.Sample(TextureSampler, texcoord);
+	float4 finalColor = texColor * f4LightAmbient;
+	finalColor += saturate(dot(f3LightDir, normal) * f4LightDiffuse * texColor);
+	return finalColor;
 	
-	return g_Texture2D.Sample(TextureSampler, texcoord);
+	//vec4 TexColor = texture2D(gSampler, TexCoord0.xy);
+	//FragColor = (TexColor * Ambient) + clamp(dot(Dir, Normal0) * Diffuse * Color0, 0.0f, 1.0f);
+
+
+	//return g_Texture2D.Sample(TextureSampler, texcoord);
 }

@@ -98,14 +98,12 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
 	if (FALSE == SHOGL::InitGraphicsA(&m[0], 1)) return 0;
-	//if (FALSE == SHOGL::InitGraphics()) return 0;
 	if (FALSE == SHOGL::InitTextures()) return 0;
 #endif
 #ifdef USING_DIRECTX11
-	//DDDCOMMON::ReverseWinding(&m[0]);
+	DDDCOMMON::ReverseWinding(&m[0]);
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHDX11::InitPipeline()) return 0;
-	//if (FALSE == SHDX11::InitGraphics()) return 0;
 	if (FALSE == SHDX11::InitGraphicsA(&m[0], 1)) return 0;
 	if (FALSE == SHDX11::InitTextures()) return 0;
 #endif

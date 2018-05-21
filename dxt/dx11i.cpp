@@ -274,9 +274,8 @@ namespace SHDX11 {
 		lpDevcon->VSSetConstantBuffers(0, 1, &pWorldTransformBuffer);
 
 		// pixel shader const buffer
-		//PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
 		PREND_CONST_BUFFER PixelRendererConstBuffer;
-		PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f));
+		PixelRendererConstBuffer.f3LightDir = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
 		PixelRendererConstBuffer.f4LightAmbient = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
 		PixelRendererConstBuffer.f4LightDiffuse = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		PixelRendererConstBuffer.f1 = 0.0f;
