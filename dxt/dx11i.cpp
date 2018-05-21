@@ -37,6 +37,7 @@ namespace SHDX11 {
 		ID3D11Buffer *lpVertexBuffer = nullptr;
 		ID3D11Buffer *lpIndexBuffer = nullptr;
 		UINT NumIndexes = 0;
+		// winding?
 		glm::mat4x4 model;
 	};
 	VertexBufferContext* VertexBufferContexts = nullptr;
@@ -58,6 +59,8 @@ namespace SHDX11 {
 		glm::vec3 f3LightDir;
 		float f1;
 	};
+
+	static DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	BOOL Init(HWND hWnd, unsigned int ScreenWidth, unsigned int ScreenHeight)
 	{
@@ -197,7 +200,7 @@ namespace SHDX11 {
 	BOOL InitPipeline(void)
 	{
 		// load and compile the two shaders
-		ID3D1Blob* VS = nullptr;
+		ID3D10Blob* VS = nullptr;
 		ID3D10Blob* PS = nullptr;
 		ID3D10Blob* pErrs = nullptr;
 		char *sCode = nullptr;
@@ -348,7 +351,7 @@ namespace SHDX11 {
 		lpDevcon->Unmap(VertexBufferContexts[0].lpVertexBuffer, NULL);                                      // unmap the buffer
 
 
-		unsigned int Indices[] = {
+		unsigned int UINTIndices[] = {
 			0, 1, 2, 3, 4, 5,
 			6, 7, 8, 9, 10, 11
 		};
@@ -363,12 +366,14 @@ namespace SHDX11 {
 		if (FAILED(lpDev->CreateBuffer(&IndexBufferDescriptor, NULL, &VertexBufferContexts[0].lpIndexBuffer))) return FALSE;
 
 		if (FAILED(lpDevcon->Map(VertexBufferContexts[0].lpIndexBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
-		memcpy(ms.pData, Indices, sizeof(unsigned int) * 12);
+		memcpy(ms.pData, UINTIndices, sizeof(unsigned int) * 12);
 		lpDevcon->Unmap(VertexBufferContexts[0].lpIndexBuffer, NULL);                                      // unmap the buffer
 
 		VertexBufferContexts[0].NumIndexes = 12;
 
 		
+		VertexBufferContexts[0].model = glm::mat4x4(1.0f)
+			* glm::translate(glm::vec3(0.0f, 0.0f, -50.0f));
 
 		return CreateShaderConstants();
 	}
@@ -384,6 +389,7 @@ namespace SHDX11 {
 
 			// create the vertex data
 			VERTEX2 *lpGeometryVertices = nullptr;
+
 			lpGeometryVertices = (VERTEX2*)malloc(configs[c].NumPositions * sizeof(VERTEX2));
 			for (UINT p = 0; p < configs[c].NumPositions; p++) {
 				lpGeometryVertices[p].pos = configs[c].positions[p];
@@ -407,9 +413,34 @@ namespace SHDX11 {
 			memcpy(ms.pData, lpGeometryVertices, configs[c].NumPositions * sizeof(VERTEX2));
 			lpDevcon->Unmap(VertexBufferContexts[c].lpVertexBuffer, NULL);
 
-			VertexBufferContexts[c].model = configs[c].model;
-
 			free(lpGeometryVertices);
+
+
+			unsigned int *lpGeometryIndices = nullptr;
+			lpGeometryIndices = (unsigned int*)malloc(configs[c].NumIndexes * sizeof(unsigned int));
+			memset(lpGeometryIndices, 0, configs[c].NumIndexes * sizeof(unsigned int));
+			for (UINT i = 0; i < configs[c].NumIndexes; i++) {
+				lpGeometryIndices[i] = (unsigned int)configs[c].indexes[i];
+			}
+
+			D3D11_BUFFER_DESC IndexBufferDescriptor;
+			ZeroMemory(&IndexBufferDescriptor, sizeof(IndexBufferDescriptor));
+			IndexBufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;                // write access access by CPU and GPU
+			IndexBufferDescriptor.ByteWidth = sizeof(unsigned int) * configs[c].NumIndexes;
+			IndexBufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;       // use as a vertex buffer
+			IndexBufferDescriptor.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // allow CPU to write in buffer
+			if (FAILED(lpDev->CreateBuffer(&IndexBufferDescriptor, NULL, &VertexBufferContexts[c].lpIndexBuffer))) return FALSE;
+
+			if (FAILED(lpDevcon->Map(VertexBufferContexts[c].lpIndexBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
+			memcpy(ms.pData, lpGeometryIndices, sizeof(unsigned int) * configs[c].NumIndexes);
+			lpDevcon->Unmap(VertexBufferContexts[c].lpIndexBuffer, NULL);
+
+			free(lpGeometryIndices);
+
+			VertexBufferContexts[c].NumIndexes = configs[c].NumIndexes;
+
+
+			VertexBufferContexts[c].model = configs[c].model;
 
 		}
 
@@ -513,6 +544,10 @@ namespace SHDX11 {
 
 	BOOL UpdateFrame(HWND hWnd)
 	{
+
+		DDDCOMMON::ProcessInput(&loc, hWnd);
+
+		/*
 		VREND_CONST_BUFFER1 rcBuffer1;
 		D3D11_MAPPED_SUBRESOURCE ms;
 		static DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 20.0f };
@@ -533,6 +568,7 @@ namespace SHDX11 {
 		if (FAILED(lpDevcon->Map(pWorldTransformBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
 		memcpy(ms.pData, &rcBuffer1, sizeof(VREND_CONST_BUFFER1));
 		lpDevcon->Unmap(pWorldTransformBuffer, NULL);
+		*/
 		return TRUE;
 	}
 
@@ -544,12 +580,32 @@ namespace SHDX11 {
 		lpDevcon->ClearRenderTargetView(lpBackbuffer, pColor);
 		lpDevcon->ClearDepthStencilView(pDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
+		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
+			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 100.0f)
+			* glm::lookAt(
+				glm::vec3(loc.ex, 0.0f, loc.ez),
+				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), 0.0f - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
+				glm::vec3(0.0f, 1.0f, 0.0));
+			//* glm::rotate(glm::radians(var), glm::vec3(0.0f, 1.0f, 0.0f))
+		
 		// do 3D rendering on the back buffer here
 		// select which vertex buffer to display
 		UINT stride = sizeof(VERTEX2);
 		UINT offset = 0;
 
 		for (int vi = 0; vi < NumVertexBuffers; vi++) {
+
+			VREND_CONST_BUFFER1 rcBuffer1;
+			D3D11_MAPPED_SUBRESOURCE ms;
+
+			// set the world matrix
+			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * VertexBufferContexts[vi].model;
+			rcBuffer1.WorldMatrix = glm::transpose(ThisWorld);
+			if (FAILED(lpDevcon->Map(pWorldTransformBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms))) return false;
+			memcpy(ms.pData, &rcBuffer1, sizeof(VREND_CONST_BUFFER1));
+			lpDevcon->Unmap(pWorldTransformBuffer, NULL);
+
+			// set the buffers
 			lpDevcon->IASetVertexBuffers(0, 1, &VertexBufferContexts[vi].lpVertexBuffer, &stride, &offset);
 			lpDevcon->IASetIndexBuffer(VertexBufferContexts[vi].lpIndexBuffer, DXGI_FORMAT_R8G8B8A8_UINT, 0);
 

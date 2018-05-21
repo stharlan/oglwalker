@@ -57,7 +57,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[0].winding = DDDCOMMON::MeshConfigWinding::CounterClockwise;
 	// SRT scale rotate translate (opposite multiply?)
 	m[0].model = glm::mat4x4(1.0f) 
-		* glm::translate(glm::vec3(0.0f, 0.0f, -50.0f))
+		* glm::translate(glm::vec3(0.0f, 0.0f, -20.0f))
 		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f));
 	
 	WNDCLASSEX wcex = {};
@@ -102,10 +102,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	if (FALSE == SHOGL::InitTextures()) return 0;
 #endif
 #ifdef USING_DIRECTX11
+	//DDDCOMMON::ReverseWinding(&m[0]);
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHDX11::InitPipeline()) return 0;
-	if (FALSE == SHDX11::InitGraphics()) return 0;
-	//if (FALSE == SHDX11::InitGraphicsA(&m[0], 1)) return 0;
+	//if (FALSE == SHDX11::InitGraphics()) return 0;
+	if (FALSE == SHDX11::InitGraphicsA(&m[0], 1)) return 0;
 	if (FALSE == SHDX11::InitTextures()) return 0;
 #endif
 

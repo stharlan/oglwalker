@@ -31,6 +31,7 @@ namespace DDDCOMMON {
 	char* ReadTextFile(const char* filename, size_t* filesize);
 	void LoadTriangleMeshFromGLB(const char* filename, TriangleMeshConfig *m);
 	void CleanupTriangleMeshConfig(TriangleMeshConfig* c);
+	void ReverseWinding(TriangleMeshConfig* config);
 
 	//BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);
 	//void CleanupDirectInput();

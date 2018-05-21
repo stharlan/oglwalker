@@ -331,5 +331,14 @@ namespace DDDCOMMON {
 		if(c->indexes) free(c->indexes);
 	}
 
+	void ReverseWinding(TriangleMeshConfig* config)
+	{
+		USHORT temp = 0;
+		for (int i = 0; i < config->NumIndexes; i+=3) {
+			temp = config->indexes[i];
+			config->indexes[i] = config->indexes[i + 2];
+			config->indexes[i + 2] = temp;
+		}
+	}
 }
 
