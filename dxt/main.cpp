@@ -1,6 +1,6 @@
 
-//#define USING_DIRECTX11
-#define USING_OPENGL
+#define USING_DIRECTX11
+//#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -100,7 +100,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[1].NumTexCoords = 4;
 	m[1].texcoords = texcoords;
 	m[1].winding = DDDCOMMON::MeshConfigWinding::Clockwise;
-	m[1].TextureFilename = std::string("wp.png");
+	m[1].TextureFilename = std::string("wp512.jpg"); // wp.png");
 
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
