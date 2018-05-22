@@ -14,6 +14,7 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <string>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/transform.hpp>
@@ -27,7 +28,6 @@
 
 LARGE_INTEGER pFreq;
 LARGE_INTEGER pLast;
-
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -60,6 +60,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[0].model = glm::mat4x4(1.0f) 
 		* glm::translate(glm::vec3(0.0f, -1.0f * m[0].bbox.ymin, -20.0f))
 		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f));
+	m[0].TextureFilename = std::string("c:\\temp\\me.jpg");
 	
 	glm::vec3 positions[] = {
 		glm::vec3(-20, 0, -20),
@@ -73,6 +74,12 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 		glm::vec3(0, 1, 0),
 		glm::vec3(0, 1, 0)
 	};
+	glm::vec2 texcoords[] = {
+		glm::vec2(0.0f, 0.0f),
+		glm::vec2(10.0f, 0.0f),
+		glm::vec2(10.0f, 10.0f),
+		glm::vec2(0.0f, 10.0f)
+	};
 	unsigned short indexes[] = { 0, 1, 3, 1, 2, 3 };
 	m[1].indexes = indexes;
 	m[1].model = glm::mat4x4(1.0f);
@@ -81,7 +88,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[1].NumNormals = 4;
 	m[1].NumPositions = 4;
 	m[1].positions = positions;
+	m[1].NumTexCoords = 4;
+	m[1].texcoords = texcoords;
 	m[1].winding = DDDCOMMON::MeshConfigWinding::Clockwise;
+	m[1].TextureFilename = std::string("c:\\temp\\me.jpg");
 
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
@@ -127,7 +137,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHDX11::InitPipeline()) return 0;
 	if (FALSE == SHDX11::InitGraphicsA(&m[0], 2)) return 0;
-	if (FALSE == SHDX11::InitTextures()) return 0;
+	//if (FALSE == SHDX11::InitTextures()) return 0;
 #endif
 
 	DDDCOMMON::CleanupTriangleMeshConfig(&m[0]);

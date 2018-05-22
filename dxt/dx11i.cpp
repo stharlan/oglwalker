@@ -5,8 +5,8 @@
 
 
 #include <Windows.h>
+#include <string>
 #include <d3d11.h>
-
 
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
@@ -30,8 +30,6 @@ namespace SHDX11 {
 	ID3D11Texture2D* pDepthStencil = nullptr;
 	ID3D11DepthStencilView* pDSV = nullptr;
 	ID3D11DepthStencilState *pDSState = nullptr;
-	ID3D11Texture2D *pTextureResource = nullptr;
-	ID3D11ShaderResourceView *pTextureResView = nullptr;
 	ID3D11SamplerState *pSamplerState = nullptr;
 
 	ID3D11RasterizerState *pRastStateCW = nullptr;
@@ -44,6 +42,9 @@ namespace SHDX11 {
 		// winding?
 		BOOL isCCW;
 		glm::mat4x4 model;
+		ID3D11Texture2D *pTextureResource = nullptr;
+		ID3D11ShaderResourceView *pTextureResView = nullptr;
+		UINT NumTextures = 0;
 	};
 	VertexBufferContext* VertexBufferContexts = nullptr;
 	UINT NumVertexBuffers = 0;
@@ -276,6 +277,21 @@ namespace SHDX11 {
 		rasterDesc.FrontCounterClockwise = TRUE;
 		if (FAILED(lpDev->CreateRasterizerState(&rasterDesc, &pRastStateCCW))) return FALSE;
 
+
+		// create a sampler
+		D3D11_SAMPLER_DESC samplerDesc;
+		ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+		samplerDesc.MinLOD = 0;
+		samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		if (FAILED(lpDev->CreateSamplerState(&samplerDesc, &pSamplerState))) return FALSE;
+
+		lpDevcon->PSSetSamplers(0, 1, &pSamplerState);
+
 		return TRUE;
 	}
 
@@ -327,6 +343,87 @@ namespace SHDX11 {
 		lpDevcon->Unmap(pLightInfoBuffer, NULL);
 
 		lpDevcon->PSSetConstantBuffers(1, 1, &pLightInfoBuffer);
+
+		return TRUE;
+	}
+
+	BOOL InitTextures(std::string& filename, ID3D11Texture2D **ppTextureResource, ID3D11ShaderResourceView **ppTextureResView)
+	{
+		size_t maxsize;
+		Magick::Image m_image;
+		Magick::Blob m_blob;
+
+		try {
+			m_image.read(filename.c_str());
+			m_image.write(&m_blob, "RGBA");
+		}
+		catch (Magick::Error& Error) {
+			return FALSE;
+		}
+
+		//unsigned int imageWidth = m_image.columns();
+		//unsigned int imageHeight = m_image.rows();
+		//const void* imageData = m_blob.data();
+		//unsigned int imageWidth = 2;
+		//unsigned int imageHeight = 2;
+		//char imageData [] = {
+		//0, 255, 0, 255,
+		//0, 255, 0, 255,
+		//0, 255, 0, 255,
+		//0, 255, 0, 255
+		//};
+
+		switch (lpDev->GetFeatureLevel())
+		{
+		case D3D_FEATURE_LEVEL_9_1:
+		case D3D_FEATURE_LEVEL_9_2:
+			maxsize = 2048 /*D3D_FL9_1_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
+			break;
+
+		case D3D_FEATURE_LEVEL_9_3:
+			maxsize = 4096 /*D3D_FL9_3_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
+			break;
+
+		case D3D_FEATURE_LEVEL_10_0:
+		case D3D_FEATURE_LEVEL_10_1:
+			maxsize = 8192 /*D3D10_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
+			break;
+
+		default:
+			maxsize = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+			break;
+		}
+
+		D3D11_TEXTURE2D_DESC desc;
+		ZeroMemory(&desc, sizeof(D3D11_TEXTURE2D_DESC));
+		desc.Width = m_image.columns();
+		desc.Height = m_image.rows();
+		desc.MipLevels = desc.ArraySize = 1;
+		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		desc.MiscFlags = 0;
+		if (FAILED(lpDev->CreateTexture2D(&desc, nullptr, ppTextureResource))) return FALSE;
+
+		// create a texture resource view
+		D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc;
+		ZeroMemory(&SRVDesc, sizeof(D3D11_SHADER_RESOURCE_VIEW_DESC));
+		SRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		SRVDesc.Texture2D.MipLevels = 1;
+
+		if (FAILED(lpDev->CreateShaderResourceView(*ppTextureResource, &SRVDesc, ppTextureResView))) return FALSE;
+
+		lpDevcon->PSSetShaderResources(0, 1, ppTextureResView);
+
+		// set the texture data
+		D3D11_MAPPED_SUBRESOURCE mappedResource;
+		ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+		if (FAILED(lpDevcon->Map(*ppTextureResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource))) return FALSE;
+		memcpy(mappedResource.pData, m_blob.data(), m_blob.length());
+		lpDevcon->Unmap(*ppTextureResource, 0);
 
 		return TRUE;
 	}
@@ -405,6 +502,11 @@ namespace SHDX11 {
 		VertexBufferContexts[0].model = glm::mat4x4(1.0f)
 			* glm::translate(glm::vec3(0.0f, 0.0f, -50.0f));
 
+		std::string meFilename("c:\\temp\\me.jpg");
+		InitTextures(meFilename,
+			&(VertexBufferContexts[0].pTextureResource),
+			&(VertexBufferContexts[0].pTextureResView));
+
 		return CreateShaderConstants();
 	}
 
@@ -425,7 +527,12 @@ namespace SHDX11 {
 				lpGeometryVertices[p].pos = configs[c].positions[p];
 				lpGeometryVertices[p].nrml = configs[c].normals[p];
 				lpGeometryVertices[p].clr = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-				lpGeometryVertices[p].texc = glm::vec2(0.5f, 0.5f);
+				if (configs[c].NumTexCoords > 0) {
+					lpGeometryVertices[p].texc = configs[c].texcoords[p];
+				}
+				else {
+					lpGeometryVertices[p].texc = glm::vec2(0.5f, 0.5f);
+				}
 			}
 
 			// create the vertex buffer
@@ -473,104 +580,13 @@ namespace SHDX11 {
 
 			VertexBufferContexts[c].model = configs[c].model;
 
+			InitTextures(configs[c].TextureFilename,
+				&VertexBufferContexts[c].pTextureResource,
+				&VertexBufferContexts[c].pTextureResView);
+
 		}
 
 		return CreateShaderConstants();
-	}
-
-	BOOL InitTextures()
-	{
-		size_t maxsize;
-		Magick::Image m_image;
-		Magick::Blob m_blob;
-
-		try {
-			m_image.read("c:\\temp\\me.jpg");
-			m_image.write(&m_blob, "RGBA");
-		}
-		catch (Magick::Error& Error) {
-			return FALSE;
-		}
-
-		//unsigned int imageWidth = m_image.columns();
-		//unsigned int imageHeight = m_image.rows();
-		//const void* imageData = m_blob.data();
-		//unsigned int imageWidth = 2;
-		//unsigned int imageHeight = 2;
-		//char imageData [] = {
-		//0, 255, 0, 255,
-		//0, 255, 0, 255,
-		//0, 255, 0, 255,
-		//0, 255, 0, 255
-		//};
-
-		switch (lpDev->GetFeatureLevel())
-		{
-		case D3D_FEATURE_LEVEL_9_1:
-		case D3D_FEATURE_LEVEL_9_2:
-			maxsize = 2048 /*D3D_FL9_1_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
-			break;
-
-		case D3D_FEATURE_LEVEL_9_3:
-			maxsize = 4096 /*D3D_FL9_3_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
-			break;
-
-		case D3D_FEATURE_LEVEL_10_0:
-		case D3D_FEATURE_LEVEL_10_1:
-			maxsize = 8192 /*D3D10_REQ_TEXTURE2D_U_OR_V_DIMENSION*/;
-			break;
-
-		default:
-			maxsize = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-			break;
-		}
-
-		D3D11_TEXTURE2D_DESC desc;
-		ZeroMemory(&desc, sizeof(D3D11_TEXTURE2D_DESC));
-		desc.Width = m_image.columns();
-		desc.Height = m_image.rows();
-		desc.MipLevels = desc.ArraySize = 1;
-		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		desc.SampleDesc.Count = 1;
-		desc.Usage = D3D11_USAGE_DYNAMIC;
-		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		desc.MiscFlags = 0;
-		if (FAILED(lpDev->CreateTexture2D(&desc, nullptr, &pTextureResource))) return FALSE;
-
-		// create a texture resource view
-		D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc;
-		ZeroMemory(&SRVDesc, sizeof(D3D11_SHADER_RESOURCE_VIEW_DESC));
-		SRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		SRVDesc.Texture2D.MipLevels = 1;
-
-		if (FAILED(lpDev->CreateShaderResourceView(pTextureResource, &SRVDesc, &pTextureResView))) return FALSE;
-
-		lpDevcon->PSSetShaderResources(0, 1, &pTextureResView);
-
-		// set the texture data
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
-		if (FAILED(lpDevcon->Map(pTextureResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource))) return FALSE;
-		memcpy(mappedResource.pData, m_blob.data(), m_blob.length());
-		lpDevcon->Unmap(pTextureResource, 0);
-
-		// create a sampler
-		D3D11_SAMPLER_DESC samplerDesc;
-		ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
-		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-		samplerDesc.MinLOD = 0;
-		samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-		if (FAILED(lpDev->CreateSamplerState(&samplerDesc, &pSamplerState))) return FALSE;
-
-		lpDevcon->PSSetSamplers(0, 1, &pSamplerState);
-
-		return TRUE;
 	}
 
 	BOOL UpdateFrame(HWND hWnd)
@@ -631,6 +647,8 @@ namespace SHDX11 {
 
 			lpDevcon->RSSetState(VertexBufferContexts[vi].isCCW ? pRastStateCCW : pRastStateCW);
 
+			lpDevcon->PSSetShaderResources(0, 1, &VertexBufferContexts[vi].pTextureResView);
+
 			// set the world matrix
 			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * VertexBufferContexts[vi].model;
 			rcBuffer1.WorldMatrix = glm::transpose(ThisWorld);
@@ -659,24 +677,27 @@ namespace SHDX11 {
 	{
 		if (lpSwapchain) lpSwapchain->SetFullscreenState(FALSE, NULL);
 
-		if (pRastStateCW) pRastStateCW->Release();
-		if (pRastStateCCW) pRastStateCCW->Release();
-		if (pSamplerState) pSamplerState->Release();
-		if (pTextureResource) pTextureResource->Release();
-		if (pTextureResView) pTextureResView->Release();
-		if (pDSV) pDSV->Release();
-		if (pDSState) pDSState->Release();
-		if (pDepthStencil) pDepthStencil->Release();
-		if (pLayout) pLayout->Release();
 		if (VertexBufferContexts) {
 			for (int i = 0; i < NumVertexBuffers; i++) {
-				if(VertexBufferContexts[i].lpVertexBuffer)
+				if (VertexBufferContexts[i].pTextureResource)
+					VertexBufferContexts[i].pTextureResource->Release();
+				if (VertexBufferContexts[i].pTextureResView)
+					VertexBufferContexts[i].pTextureResView->Release();
+				if (VertexBufferContexts[i].lpVertexBuffer)
 					VertexBufferContexts[i].lpVertexBuffer->Release();
 				if (VertexBufferContexts[i].lpIndexBuffer)
 					VertexBufferContexts[i].lpIndexBuffer->Release();
 			}
 			free(VertexBufferContexts);
 		}
+
+		if (pRastStateCW) pRastStateCW->Release();
+		if (pRastStateCCW) pRastStateCCW->Release();
+		if (pSamplerState) pSamplerState->Release();
+		if (pDSV) pDSV->Release();
+		if (pDSState) pDSState->Release();
+		if (pDepthStencil) pDepthStencil->Release();
+		if (pLayout) pLayout->Release();
 		if (pWorldTransformBuffer) pWorldTransformBuffer->Release();
 		if (pLightInfoBuffer) pLightInfoBuffer->Release();
 		if (lpVS) lpVS->Release();

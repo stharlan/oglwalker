@@ -29,11 +29,14 @@ namespace DDDCOMMON {
 		UINT NumPositions = 0;
 		glm::vec3 *normals = nullptr;
 		UINT NumNormals = 0;
+		glm::vec2 *texcoords = nullptr;
+		UINT NumTexCoords = 0;
 		USHORT *indexes = nullptr;
 		UINT NumIndexes = 0;
 		MeshConfigWinding winding;
 		glm::mat4x4 model;
 		BoundingBox bbox;
+		std::string TextureFilename;
 	};
 
 	BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);

@@ -7,6 +7,7 @@
 #include <Windows.h>
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <GL/glew.h>
 #include <gl/GL.h>
 #include <gl/GLU.h>

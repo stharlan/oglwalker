@@ -6,7 +6,6 @@ namespace SHDX11 {
 	BOOL InitPipeline(void);
 	BOOL InitGraphics();
 	BOOL InitGraphicsA(DDDCOMMON::TriangleMeshConfig* configs, int NumConfigs);
-	BOOL InitTextures(void);
 	BOOL RenderFrame(void);
 	BOOL UpdateFrame(HWND hWnd);
 	void Cleanup(void);
