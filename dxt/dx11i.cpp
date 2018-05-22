@@ -428,6 +428,7 @@ namespace SHDX11 {
 		return TRUE;
 	}
 
+	/*
 	BOOL InitGraphics()
 	{
 		D3D11_BUFFER_DESC VertexBufferDescriptor;
@@ -502,13 +503,14 @@ namespace SHDX11 {
 		VertexBufferContexts[0].model = glm::mat4x4(1.0f)
 			* glm::translate(glm::vec3(0.0f, 0.0f, -50.0f));
 
-		std::string meFilename("c:\\temp\\me.jpg");
+		std::string meFilename("wp.jpg");
 		InitTextures(meFilename,
 			&(VertexBufferContexts[0].pTextureResource),
 			&(VertexBufferContexts[0].pTextureResView));
 
 		return CreateShaderConstants();
 	}
+	*/
 
 	BOOL InitGraphicsA(DDDCOMMON::TriangleMeshConfig* configs, int NumConfigs)
 	{

@@ -1,6 +1,6 @@
 
-#define USING_DIRECTX11
-//#define USING_OPENGL
+//#define USING_DIRECTX11
+#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -52,7 +52,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 
 	DDDCOMMON::TriangleMeshConfig m[2];
 	memset(&m[0], 0, 2 * sizeof(DDDCOMMON::TriangleMeshConfig));
-	DDDCOMMON::LoadTriangleMeshFromGLB("c:\\temp\\cat.glb", &m[0]);
+	DDDCOMMON::LoadTriangleMeshFromGLB("cat.glb", &m[0]);
 	DDDCOMMON::CalculateBoundingBox(&m[0]);
 
 	m[0].winding = DDDCOMMON::MeshConfigWinding::CounterClockwise;
@@ -60,7 +60,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[0].model = glm::mat4x4(1.0f) 
 		* glm::translate(glm::vec3(0.0f, -1.0f * m[0].bbox.ymin, -20.0f))
 		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f));
-	m[0].TextureFilename = std::string("c:\\temp\\me.jpg");
+	m[0].TextureFilename = std::string("redpix.png");
 	
 	glm::vec3 positions[] = {
 		glm::vec3(-20, 0, -20),
@@ -76,9 +76,9 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	};
 	glm::vec2 texcoords[] = {
 		glm::vec2(0.0f, 0.0f),
-		glm::vec2(10.0f, 0.0f),
-		glm::vec2(10.0f, 10.0f),
-		glm::vec2(0.0f, 10.0f)
+		glm::vec2(1.0f, 0.0f),
+		glm::vec2(1.0f, 1.0f),
+		glm::vec2(0.0f, 1.0f)
 	};
 	unsigned short indexes[] = { 0, 1, 3, 1, 2, 3 };
 	m[1].indexes = indexes;
@@ -91,7 +91,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[1].NumTexCoords = 4;
 	m[1].texcoords = texcoords;
 	m[1].winding = DDDCOMMON::MeshConfigWinding::Clockwise;
-	m[1].TextureFilename = std::string("c:\\temp\\me.jpg");
+	m[1].TextureFilename = std::string("wp.png");
 
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
@@ -127,11 +127,14 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	if (!hWnd) return 0;
 
 	if (FALSE == DDDCOMMON::SetupDirectInput(hInst, hWnd)) return 0;
+
+	// need to load all textures in one shot
+	// and refer to them from the objects with id's
 #ifdef USING_OPENGL
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
 	if (FALSE == SHOGL::InitGraphicsA(&m[0], 2)) return 0;
-	if (FALSE == SHOGL::InitTextures()) return 0;
+	//if (FALSE == SHOGL::InitTextures()) return 0;
 #endif
 #ifdef USING_DIRECTX11
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;

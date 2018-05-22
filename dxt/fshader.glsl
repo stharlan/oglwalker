@@ -26,5 +26,6 @@ void main()
 	vec3 Dir = vec3(1.0f, 1.0f, 1.0f);
 	vec4 Diffuse = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	vec4 TexColor = texture2D(gSampler, TexCoord0.xy);
-	FragColor = (TexColor * Ambient) + clamp(dot(Dir, Normal0) * Diffuse * Color0, 0.0f, 1.0f);
+	//FragColor = (TexColor * Ambient) + clamp(dot(Dir, Normal0) * Diffuse * Color0, 0.0f, 1.0f);
+	FragColor = TexColor;
 }

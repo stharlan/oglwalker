@@ -30,13 +30,13 @@ namespace SHOGL {
 		GLuint NumIndexes;
 		GLenum Winding;
 		glm::mat4x4 model;
+		GLuint TextureId;
 	};
 	TriangleMesh *meshes = nullptr;
 	GLuint NumMeshes = 0;
 	GLuint ShaderProgram = 0;
 	GLuint WorldLocation = 0;
 	GLuint gSampler = 0;
-	GLuint TextureMe = 0;
 
 	typedef struct {
 		glm::vec3 position;
@@ -135,6 +135,8 @@ namespace SHOGL {
 		}
 
 		glAttachShader(ShaderProgram, ShaderObj);
+
+		return TRUE;
 	}
 
 	BOOL CompileShaders(const char* vsFilename, const char* fsFilename, GLuint* lpShaderProgram)
@@ -183,6 +185,13 @@ namespace SHOGL {
 
 	BOOL InitPipeline(void)
 	{
+		std::ofstream glinfo("glinfo.txt");
+		const GLubyte* answer = glGetString(GL_VENDOR); glinfo << "Vendor: " << answer << std::endl;
+		answer = glGetString(GL_RENDERER); glinfo << "Renderer: " << answer << std::endl;
+		answer = glGetString(GL_VERSION); glinfo << "Version: " << answer << std::endl;
+		answer = glGetString(GL_SHADING_LANGUAGE_VERSION); glinfo << "GLSL Version: " << answer << std::endl;
+		answer = glGetString(GL_EXTENSIONS); glinfo << "Extensions: " << answer << std::endl;
+
 		glClearColor(0.0f, 0.2f, 0.4f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
 		glFrontFace(GL_CCW);
@@ -196,9 +205,6 @@ namespace SHOGL {
 		gSampler = glGetUniformLocation(ShaderProgram, "gSampler");
 
 		glUniform1i(gSampler, 0);
-
-		glGenTextures(1, &TextureMe);
-		TextureLoad("c:\\temp\\me.jpg", GL_TEXTURE_2D, TextureMe);
 
 		return TRUE;
 	}
@@ -242,11 +248,6 @@ namespace SHOGL {
 	//	return TRUE;
 	//}
 
-	BOOL InitTextures(void)
-	{
-		return TRUE;
-	}
-
 	BOOL RenderFrame(void)
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -258,12 +259,11 @@ namespace SHOGL {
 				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), loc.ey - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
 				glm::vec3(0.0f, 1.0f, 0.0));
 
-		for (int MeshIndex = 0; MeshIndex < NumMeshes; MeshIndex++) {
+		for (UINT MeshIndex = 0; MeshIndex < NumMeshes; MeshIndex++) {
 
 			glFrontFace(meshes[MeshIndex].Winding);
 
-			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * meshes[MeshIndex].model;
-			//glUniformMatrix4fv(WorldLocation, 1, GL_FALSE, &unTransposedWorldMatrix[0][0]);
+			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * meshes[MeshIndex].model;			
 			glUniformMatrix4fv(WorldLocation, 1, GL_FALSE, &ThisWorld[0][0]);
 
 			glEnableVertexAttribArray(0);
@@ -272,6 +272,7 @@ namespace SHOGL {
 			glEnableVertexAttribArray(3);
 
 			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, meshes[MeshIndex].TextureId);
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshes[MeshIndex].IBA);
 			glBindBuffer(GL_ARRAY_BUFFER, meshes[MeshIndex].VBA);
@@ -280,8 +281,6 @@ namespace SHOGL {
 			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)12);
 			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)28);
 			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)40);
-
-			glBindTexture(GL_TEXTURE_2D, TextureMe);
 
 			glDrawElements(GL_TRIANGLES, meshes[MeshIndex].NumIndexes, GL_UNSIGNED_INT, 0);
 
@@ -305,6 +304,13 @@ namespace SHOGL {
 
 	void Cleanup()
 	{
+		// glDeleteBuffers on VBA's and IBA's
+		// glDeleteTextures
+		for (UINT i = 0; i < NumMeshes; i++) {
+			if(meshes[i].VBA > 0) glDeleteBuffers(1, &meshes[i].VBA);
+			if(meshes[i].IBA > 0)  glDeleteBuffers(1, &meshes[i].IBA);
+			if(meshes[i].TextureId > 0) glDeleteTextures(1, &meshes[i].TextureId);
+		}
 		if (meshes != nullptr) free(meshes);
 		if (g_hdc != nullptr) {
 			wglMakeCurrent(g_hdc, nullptr);
@@ -343,11 +349,16 @@ namespace SHOGL {
 
 			GeometryVertices = (glmvec12*)malloc(m->NumPositions * sizeof(glmvec12));
 			memset(GeometryVertices, 0, m->NumPositions * sizeof(glmvec12));
-			for (int i = 0; i < m->NumPositions; i++) {
+			for (UINT i = 0; i < m->NumPositions; i++) {
 				GeometryVertices[i].position = m->positions[i];
 				GeometryVertices[i].normal = glm::normalize(m->normals[i]);
 				GeometryVertices[i].color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-				GeometryVertices[i].texture = glm::vec2(0.5f, 0.5f);
+				if (m->NumTexCoords > 0) {
+					GeometryVertices[i].texture = m->texcoords[i];
+				}
+				else {
+					GeometryVertices[i].texture = glm::vec2(0.5f, 0.5f);
+				}
 			}
 
 			glBindBuffer(GL_ARRAY_BUFFER, VBAArray[c]);
@@ -358,7 +369,7 @@ namespace SHOGL {
 
 			IndexArray = (UINT*)malloc(m->NumIndexes * sizeof(UINT));
 			memset(IndexArray, 0, m->NumIndexes * sizeof(UINT));
-			for (int i = 0; i < m->NumIndexes; i++) IndexArray[i] = m->indexes[i];
+			for (UINT i = 0; i < m->NumIndexes; i++) IndexArray[i] = m->indexes[i];
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBAArray[c]);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->NumIndexes * sizeof(UINT), IndexArray, GL_STATIC_DRAW);
@@ -369,6 +380,13 @@ namespace SHOGL {
 			meshes[c].NumIndexes = m->NumIndexes;
 			meshes[c].Winding = (m->winding == DDDCOMMON::MeshConfigWinding::Clockwise ? GL_CW : GL_CCW);
 			meshes[c].model = m->model;
+
+			if (m->TextureFilename.length() > 0)
+			{
+				glGenTextures(1, &meshes[c].TextureId);
+				TextureLoad(m->TextureFilename.c_str(), GL_TEXTURE_2D, meshes[c].TextureId);
+			}
+
 		}
 
 		free(VBAArray);

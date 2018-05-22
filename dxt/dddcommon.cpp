@@ -223,7 +223,7 @@ namespace DDDCOMMON {
 
 	void LoadTriangleMeshFromGLB(const char* filename, TriangleMeshConfig *m)
 	{
-		std::ofstream dbg("c:\\temp\\glb_debug.txt");
+		std::ofstream dbg("glb_debug.txt");
 		dbg << "opening file" << std::endl;
 		fx::gltf::Document cloud = fx::gltf::LoadFromBinary(filename);
 
@@ -335,7 +335,7 @@ namespace DDDCOMMON {
 	void ReverseWinding(TriangleMeshConfig* config)
 	{
 		USHORT temp = 0;
-		for (int i = 0; i < config->NumIndexes; i+=3) {
+		for (UINT i = 0; i < config->NumIndexes; i+=3) {
 			temp = config->indexes[i];
 			config->indexes[i] = config->indexes[i + 2];
 			config->indexes[i + 2] = temp;
@@ -349,7 +349,7 @@ namespace DDDCOMMON {
 		config->bbox.ymax = FLT_MIN;
 		config->bbox.zmin = FLT_MAX;
 		config->bbox.zmax = FLT_MIN;
-		for (int i = 0; i < config->NumPositions; i++) {
+		for (UINT i = 0; i < config->NumPositions; i++) {
 			if (config->positions[i].x > config->bbox.xmax) config->bbox.xmax = config->positions[i].x;
 			if (config->positions[i].x < config->bbox.xmin) config->bbox.xmin = config->positions[i].x;
 			if (config->positions[i].y > config->bbox.ymax) config->bbox.ymax = config->positions[i].y;
