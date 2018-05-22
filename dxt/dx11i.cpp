@@ -12,6 +12,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/transform.hpp>
 #include <Magick++.h>
+#include <fstream>
 #include "dddcommon.h"
 #include "dx11i.h"
 
@@ -33,11 +34,15 @@ namespace SHDX11 {
 	ID3D11ShaderResourceView *pTextureResView = nullptr;
 	ID3D11SamplerState *pSamplerState = nullptr;
 
+	ID3D11RasterizerState *pRastStateCW = nullptr;
+	ID3D11RasterizerState *pRastStateCCW = nullptr;
+
 	struct VertexBufferContext {
 		ID3D11Buffer *lpVertexBuffer = nullptr;
 		ID3D11Buffer *lpIndexBuffer = nullptr;
 		UINT NumIndexes = 0;
 		// winding?
+		BOOL isCCW;
 		glm::mat4x4 model;
 	};
 	VertexBufferContext* VertexBufferContexts = nullptr;
@@ -246,6 +251,31 @@ namespace SHDX11 {
 			VS->GetBufferPointer(), VS->GetBufferSize(), &pLayout))) return FALSE;
 		lpDevcon->IASetInputLayout(pLayout);
 
+		//memset(&g_RasterizerDescriptor, 0, sizeof(D3D11_RASTERIZER_DESC));
+		//ID3D11RasterizerState *pRState = nullptr;
+		//lpDevcon->RSGetState(&pRState);
+		//pRState->GetDesc(&g_RasterizerDescriptor);
+		//pRState->Release();
+
+		// rasterizer state
+		D3D11_RASTERIZER_DESC rasterDesc;
+		ZeroMemory(&rasterDesc, sizeof(D3D11_RASTERIZER_DESC));
+		rasterDesc.AntialiasedLineEnable = false;
+		rasterDesc.CullMode = D3D11_CULL_BACK;
+		rasterDesc.DepthBias = 0;
+		rasterDesc.DepthBiasClamp = 0.0f;
+		rasterDesc.DepthClipEnable = true;
+		rasterDesc.FillMode = D3D11_FILL_SOLID;
+		rasterDesc.FrontCounterClockwise = FALSE;
+		rasterDesc.MultisampleEnable = false;
+		rasterDesc.ScissorEnable = false;
+		rasterDesc.SlopeScaledDepthBias = 0.0f;
+		if (FAILED(lpDev->CreateRasterizerState(&rasterDesc, &pRastStateCW))) return FALSE;
+		lpDevcon->RSSetState(pRastStateCW);
+
+		rasterDesc.FrontCounterClockwise = TRUE;
+		if (FAILED(lpDev->CreateRasterizerState(&rasterDesc, &pRastStateCCW))) return FALSE;
+
 		return TRUE;
 	}
 
@@ -370,6 +400,7 @@ namespace SHDX11 {
 
 		VertexBufferContexts[0].NumIndexes = 12;
 
+		VertexBufferContexts[0].isCCW = FALSE;
 		
 		VertexBufferContexts[0].model = glm::mat4x4(1.0f)
 			* glm::translate(glm::vec3(0.0f, 0.0f, -50.0f));
@@ -438,6 +469,7 @@ namespace SHDX11 {
 
 			VertexBufferContexts[c].NumIndexes = configs[c].NumIndexes;
 
+			VertexBufferContexts[c].isCCW = (configs[c].winding == DDDCOMMON::MeshConfigWinding::Clockwise ? FALSE : TRUE);
 
 			VertexBufferContexts[c].model = configs[c].model;
 
@@ -597,6 +629,8 @@ namespace SHDX11 {
 			VREND_CONST_BUFFER1 rcBuffer1;
 			D3D11_MAPPED_SUBRESOURCE ms;
 
+			lpDevcon->RSSetState(VertexBufferContexts[vi].isCCW ? pRastStateCCW : pRastStateCW);
+
 			// set the world matrix
 			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * VertexBufferContexts[vi].model;
 			rcBuffer1.WorldMatrix = glm::transpose(ThisWorld);
@@ -624,6 +658,9 @@ namespace SHDX11 {
 	void Cleanup(void)
 	{
 		if (lpSwapchain) lpSwapchain->SetFullscreenState(FALSE, NULL);
+
+		if (pRastStateCW) pRastStateCW->Release();
+		if (pRastStateCCW) pRastStateCCW->Release();
 		if (pSamplerState) pSamplerState->Release();
 		if (pTextureResource) pTextureResource->Release();
 		if (pTextureResView) pTextureResView->Release();
