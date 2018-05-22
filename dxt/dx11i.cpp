@@ -18,6 +18,8 @@
 
 namespace SHDX11 {
 
+	//ID3D11Debug *ddebug = nullptr;
+
 	IDXGISwapChain *lpSwapchain = nullptr;
 	ID3D11Device *lpDev = nullptr;
 	ID3D11DeviceContext *lpDevcon = nullptr;
@@ -105,7 +107,7 @@ namespace SHDX11 {
 			nullptr,
 			D3D_DRIVER_TYPE_HARDWARE,
 			nullptr,
-			D3D11_CREATE_DEVICE_SINGLETHREADED,
+			D3D11_CREATE_DEVICE_SINGLETHREADED, //|D3D11_CREATE_DEVICE_DEBUG,
 			featureLevels,
 			_ARRAYSIZE(featureLevels),
 			D3D11_SDK_VERSION,
@@ -116,6 +118,8 @@ namespace SHDX11 {
 			&lpDevcon);
 
 		if (FAILED(hr)) return FALSE;
+
+		//lpDev->QueryInterface(&ddebug);
 
 		// get the address of the back buffer
 		ID3D11Texture2D *lpTexture2D;
@@ -708,6 +712,11 @@ namespace SHDX11 {
 		if (lpBackbuffer) lpBackbuffer->Release();
 		if (lpDev) lpDev->Release();
 		if (lpDevcon) lpDevcon->Release();
+
+		//if (ddebug != nullptr) {
+		//	ddebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+		//	ddebug->Release();			
+		//}
 	}
 
 }

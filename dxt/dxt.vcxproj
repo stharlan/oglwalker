@@ -87,12 +87,11 @@
       <AdditionalLibraryDirectories>C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\VisualMagick\lib;C:\Library\glew-2.1.0\vs2017\glew\x64\Release</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)shaders.hlsl" "$(OutputPath)"
-copy "$(ProjectDir)fshader.glsl" "$(OutputPath)"
-copy "$(ProjectDir)vshader.glsl" "$(OutputPath)"
-copy "$(ProjectDir)\resources\*.png" "$(OutputPath)"
-copy "$(ProjectDir)\resources\*.jpg" "$(OutputPath)"
-copy "$(ProjectDir)\resources\*.glb" "$(OutputPath)"</Command>
+      <Command>copy "$(ProjectDir)*.hlsl" "$(OutputPath)"
+copy "$(ProjectDir)*.glsl" "$(OutputPath)"
+copy "$(ProjectDir)*.png" "$(OutputPath)"
+copy "$(ProjectDir)*.jpg" "$(OutputPath)"
+copy "$(ProjectDir)*.glb" "$(OutputPath)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -123,12 +122,11 @@ copy "$(ProjectDir)vshader.glsl" "$(OutputPath)"</Command>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)shaders.hlsl" "$(OutputPath)"
-copy "$(ProjectDir)fshader.glsl" "$(OutputPath)"
-copy "$(ProjectDir)vshader.glsl" "$(OutputPath)"
-copy "$(ProjectDir)\resources\*.png" "$(OutputPath)"
-copy "$(ProjectDir)\resources\*.jpg" "$(OutputPath)"
-copy "$(ProjectDir)\resources\*.glb" "$(OutputPath)"</Command>
+      <Command>copy "$(ProjectDir)*.hlsl" "$(OutputPath)"
+copy "$(ProjectDir)*.glsl" "$(OutputPath)"
+copy "$(ProjectDir)*.png" "$(OutputPath)"
+copy "$(ProjectDir)*.jpg" "$(OutputPath)"
+copy "$(ProjectDir)*.glb" "$(OutputPath)"</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalLibraryDirectories>C:\Library\ImageMagick-windows\ImageMagick-7.0.7-31\VisualMagick\lib;C:\Library\glew-2.1.0\vs2017\glew\x64\Release</AdditionalLibraryDirectories>

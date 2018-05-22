@@ -1,6 +1,6 @@
 
-//#define USING_DIRECTX11
-#define USING_OPENGL
+#define USING_DIRECTX11
+//#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -15,6 +15,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string>
+#include <fstream>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/transform.hpp>
@@ -46,6 +47,14 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nCmdShow)
 {
+
+	std::ofstream dbg("debug_info.txt");
+	char cdir[256];
+	memset(cdir, 0, 256);
+	GetCurrentDirectory(256, cdir);
+	dbg << cdir << std::endl;
+	dbg.flush();
+	dbg.close();
 
 	LARGE_INTEGER pThisTime;
 	char TitleText[256];
