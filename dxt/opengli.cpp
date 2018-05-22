@@ -66,6 +66,9 @@ namespace SHOGL {
 		glTexImage2D(m_textureTarget, 0, GL_RGBA, (GLsizei)m_image.columns(), (GLsizei)m_image.rows(), 0, GL_RGBA, GL_UNSIGNED_BYTE, m_blob.data());
 		glTexParameterf(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameterf(m_textureTarget, GL_TEXTURE_WRAP_R, GL_REPEAT);
+		glTexParameterf(m_textureTarget, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameterf(m_textureTarget, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glBindTexture(m_textureTarget, 0);
 
 		return true;

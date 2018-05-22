@@ -1,6 +1,6 @@
 
-#define USING_DIRECTX11
-//#define USING_OPENGL
+//#define USING_DIRECTX11
+#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -72,10 +72,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[0].TextureFilename = std::string("redpix.png");
 	
 	glm::vec3 positions[] = {
-		glm::vec3(-20, 0, -20),
-		glm::vec3(20, 0, -20),
-		glm::vec3(20, 0, 20),
-		glm::vec3(-20, 0, 20)
+		glm::vec3(-50, 0, -50),
+		glm::vec3(50, 0, -50),
+		glm::vec3(50, 0, 50),
+		glm::vec3(-50, 0, 50)
 	};
 	glm::vec3 normals[] = {
 		glm::vec3(0, 1, 0),
@@ -85,9 +85,9 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	};
 	glm::vec2 texcoords[] = {
 		glm::vec2(0.0f, 0.0f),
-		glm::vec2(1.0f, 0.0f),
-		glm::vec2(1.0f, 1.0f),
-		glm::vec2(0.0f, 1.0f)
+		glm::vec2(2.5f, 0.0f),
+		glm::vec2(2.5f, 2.5f),
+		glm::vec2(0.0f, 2.5f)
 	};
 	unsigned short indexes[] = { 0, 1, 3, 1, 2, 3 };
 	m[1].indexes = indexes;

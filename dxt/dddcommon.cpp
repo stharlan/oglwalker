@@ -82,7 +82,7 @@ namespace DDDCOMMON {
 	{
 		unsigned char keystate[256];
 		DIMOUSESTATE mouseState;
-		float WalkingStride = 0.001f;
+		float WalkingStride = 0.01f;
 
 		if (TRUE == ReadMouseState(&mouseState))
 		{
