@@ -53,18 +53,19 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	DDDCOMMON::TriangleMeshConfig m[2];
 	memset(&m[0], 0, 2 * sizeof(DDDCOMMON::TriangleMeshConfig));
 	DDDCOMMON::LoadTriangleMeshFromGLB("c:\\temp\\cat.glb", &m[0]);
+	DDDCOMMON::CalculateBoundingBox(&m[0]);
 
 	m[0].winding = DDDCOMMON::MeshConfigWinding::CounterClockwise;
 	// SRT scale rotate translate (opposite multiply?)
 	m[0].model = glm::mat4x4(1.0f) 
-		* glm::translate(glm::vec3(0.0f, 0.0f, -20.0f))
+		* glm::translate(glm::vec3(0.0f, -1.0f * m[0].bbox.ymin, -20.0f))
 		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f));
 	
 	glm::vec3 positions[] = {
-		glm::vec3(-20, -2, -20),
-		glm::vec3(20, -2, -20),
-		glm::vec3(20, -2, 20),
-		glm::vec3(-20, -2, 20)
+		glm::vec3(-20, 0, -20),
+		glm::vec3(20, 0, -20),
+		glm::vec3(20, 0, 20),
+		glm::vec3(-20, 0, 20)
 	};
 	glm::vec3 normals[] = {
 		glm::vec3(0, 1, 0),

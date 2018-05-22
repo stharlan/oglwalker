@@ -6,12 +6,22 @@ namespace DDDCOMMON {
 		float azimuth;
 		float elevation;
 		float ex;
+		float ey;
 		float ez;
 	};
 
 	enum MeshConfigWinding {
 		Clockwise,
 		CounterClockwise
+	};
+
+	struct BoundingBox {
+		float xmin;
+		float xmax;
+		float ymin;
+		float ymax;
+		float zmin;
+		float zmax;
 	};
 
 	struct TriangleMeshConfig {
@@ -23,6 +33,7 @@ namespace DDDCOMMON {
 		UINT NumIndexes = 0;
 		MeshConfigWinding winding;
 		glm::mat4x4 model;
+		BoundingBox bbox;
 	};
 
 	BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);
@@ -32,6 +43,7 @@ namespace DDDCOMMON {
 	void LoadTriangleMeshFromGLB(const char* filename, TriangleMeshConfig *m);
 	void CleanupTriangleMeshConfig(TriangleMeshConfig* c);
 	void ReverseWinding(TriangleMeshConfig* config);
+	void CalculateBoundingBox(TriangleMeshConfig* config);
 
 	//BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);
 	//void CleanupDirectInput();

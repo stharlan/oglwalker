@@ -340,5 +340,22 @@ namespace DDDCOMMON {
 			config->indexes[i + 2] = temp;
 		}
 	}
+
+	void CalculateBoundingBox(TriangleMeshConfig* config) {
+		config->bbox.xmin = FLT_MAX;
+		config->bbox.xmax = FLT_MIN;
+		config->bbox.ymin = FLT_MAX;
+		config->bbox.ymax = FLT_MIN;
+		config->bbox.zmin = FLT_MAX;
+		config->bbox.zmax = FLT_MIN;
+		for (int i = 0; i < config->NumPositions; i++) {
+			if (config->positions[i].x > config->bbox.xmax) config->bbox.xmax = config->positions[i].x;
+			if (config->positions[i].x < config->bbox.xmin) config->bbox.xmin = config->positions[i].x;
+			if (config->positions[i].y > config->bbox.ymax) config->bbox.ymax = config->positions[i].y;
+			if (config->positions[i].y < config->bbox.ymin) config->bbox.ymin = config->positions[i].y;
+			if (config->positions[i].z > config->bbox.zmax) config->bbox.zmax = config->positions[i].z;
+			if (config->positions[i].z < config->bbox.zmin) config->bbox.zmin = config->positions[i].z;
+		}
+	}
 }
 

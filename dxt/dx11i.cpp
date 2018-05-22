@@ -65,7 +65,7 @@ namespace SHDX11 {
 		float f1;
 	};
 
-	static DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 0.0f };
+	static DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 6.0f, 0.0f };
 
 	BOOL Init(HWND hWnd, unsigned int ScreenWidth, unsigned int ScreenHeight)
 	{
@@ -614,8 +614,8 @@ namespace SHDX11 {
 		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
 			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 100.0f)
 			* glm::lookAt(
-				glm::vec3(loc.ex, 0.0f, loc.ez),
-				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), 0.0f - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
+				glm::vec3(loc.ex, loc.ey, loc.ez),
+				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), loc.ey - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
 				glm::vec3(0.0f, 1.0f, 0.0));
 			//* glm::rotate(glm::radians(var), glm::vec3(0.0f, 1.0f, 0.0f))
 		

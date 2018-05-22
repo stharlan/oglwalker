@@ -44,7 +44,7 @@ namespace SHOGL {
 		glm::vec2 texture;
 	} glmvec12;
 
-	DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 0.0f };
+	DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 6.0f, 0.0f };
 
 	unsigned int gScreenWidth = 0, gScreenHeight = 0;
 
@@ -253,8 +253,8 @@ namespace SHOGL {
 		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
 			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 500.0f)
 			* glm::lookAt(
-				glm::vec3(loc.ex, 0.0f, loc.ez),
-				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), 0.0f - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
+				glm::vec3(loc.ex, loc.ey, loc.ez),
+				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), loc.ey - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
 				glm::vec3(0.0f, 1.0f, 0.0));
 
 		for (int MeshIndex = 0; MeshIndex < NumMeshes; MeshIndex++) {
