@@ -400,8 +400,8 @@ namespace SHDX11 {
 
 		D3D11_TEXTURE2D_DESC desc;
 		ZeroMemory(&desc, sizeof(D3D11_TEXTURE2D_DESC));
-		desc.Width = m_image.columns();
-		desc.Height = m_image.rows();
+		desc.Width = static_cast<UINT>(m_image.columns());
+		desc.Height = static_cast<UINT>(m_image.rows());
 		desc.MipLevels = desc.ArraySize = 1;
 		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		desc.SampleDesc.Count = 1;
@@ -523,7 +523,7 @@ namespace SHDX11 {
 		ZeroMemory(VertexBufferContexts, sizeof(NumConfigs * sizeof(VertexBufferContext)));
 		NumVertexBuffers = NumConfigs;
 
-		for (UINT c = 0; c < NumConfigs; c++) {
+		for (int c = 0; c < NumConfigs; c++) {
 
 			// create the vertex data
 			VERTEX2 *lpGeometryVertices = nullptr;
@@ -586,9 +586,10 @@ namespace SHDX11 {
 
 			VertexBufferContexts[c].model = configs[c].model;
 
-			InitTextures(configs[c].TextureFilename,
-				&VertexBufferContexts[c].pTextureResource,
-				&VertexBufferContexts[c].pTextureResView);
+			// move init textures to separate method
+			//InitTextures(configs[c].TextureFilename,
+				//&VertexBufferContexts[c].pTextureResource,
+				//&VertexBufferContexts[c].pTextureResView);
 
 		}
 
@@ -646,7 +647,7 @@ namespace SHDX11 {
 		UINT stride = sizeof(VERTEX2);
 		UINT offset = 0;
 
-		for (int vi = 0; vi < NumVertexBuffers; vi++) {
+		for (UINT vi = 0; vi < NumVertexBuffers; vi++) {
 
 			VREND_CONST_BUFFER1 rcBuffer1;
 			D3D11_MAPPED_SUBRESOURCE ms;
@@ -684,7 +685,7 @@ namespace SHDX11 {
 		if (lpSwapchain) lpSwapchain->SetFullscreenState(FALSE, NULL);
 
 		if (VertexBufferContexts) {
-			for (int i = 0; i < NumVertexBuffers; i++) {
+			for (UINT i = 0; i < NumVertexBuffers; i++) {
 				if (VertexBufferContexts[i].pTextureResource)
 					VertexBufferContexts[i].pTextureResource->Release();
 				if (VertexBufferContexts[i].pTextureResView)

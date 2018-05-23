@@ -1,6 +1,6 @@
 
-#define USING_DIRECTX11
-//#define USING_OPENGL
+//#define USING_DIRECTX11
+#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -15,6 +15,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string>
+#include <vector>
 #include <fstream>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
@@ -69,7 +70,8 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[0].model = glm::mat4x4(1.0f) 
 		* glm::translate(glm::vec3(0.0f, -1.0f * m[0].bbox.ymin, -20.0f))
 		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f));
-	m[0].TextureFilename = std::string("redpix.png");
+	//m[0].TextureFilename = std::string("redpix.png");
+	m[0].TextureId = 0;
 	
 	glm::vec3 positions[] = {
 		glm::vec3(-50, 0, -50),
@@ -100,7 +102,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[1].NumTexCoords = 4;
 	m[1].texcoords = texcoords;
 	m[1].winding = DDDCOMMON::MeshConfigWinding::Clockwise;
-	m[1].TextureFilename = std::string("wp512.jpg"); // wp.png");
+	//m[1].TextureFilename = std::string("wp512.jpg"); // wp.png");
+	m[1].TextureId = 1;
+
+	const char* TextureList[] = { "redpix.png", "wp512.jpg" };
+	std::vector<std::string> TextureVector(TextureList, std::end(TextureList));
 
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
@@ -143,7 +149,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
 	if (FALSE == SHOGL::InitGraphicsA(&m[0], 2)) return 0;
-	//if (FALSE == SHOGL::InitTextures()) return 0;
+	if (FALSE == SHOGL::InitTextures(TextureVector)) return 0;
 #endif
 #ifdef USING_DIRECTX11
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;

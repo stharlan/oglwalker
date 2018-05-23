@@ -36,7 +36,7 @@ namespace DDDCOMMON {
 		MeshConfigWinding winding;
 		glm::mat4x4 model;
 		BoundingBox bbox;
-		std::string TextureFilename;
+		UINT TextureId;
 	};
 
 	BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);

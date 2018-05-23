@@ -30,7 +30,7 @@ namespace SHOGL {
 		GLuint NumIndexes;
 		GLenum Winding;
 		glm::mat4x4 model;
-		GLuint TextureId;
+		GLuint MeshTextureId;
 	};
 	TriangleMesh *meshes = nullptr;
 	GLuint NumMeshes = 0;
@@ -48,6 +48,9 @@ namespace SHOGL {
 	DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 6.0f, 0.0f };
 
 	unsigned int gScreenWidth = 0, gScreenHeight = 0;
+
+	typedef std::pair<UINT, GLuint> TextureIdType;
+	std::map<UINT, GLuint> TextureMap;
 
 	bool TextureLoad(const char* m_fileName, GLenum m_textureTarget, GLuint TextureObjectId)
 	{
@@ -275,7 +278,9 @@ namespace SHOGL {
 			glEnableVertexAttribArray(3);
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, meshes[MeshIndex].TextureId);
+
+			GLuint TexGlUint = TextureMap.at(meshes[MeshIndex].MeshTextureId);
+			glBindTexture(GL_TEXTURE_2D, TexGlUint);
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshes[MeshIndex].IBA);
 			glBindBuffer(GL_ARRAY_BUFFER, meshes[MeshIndex].VBA);
@@ -308,11 +313,15 @@ namespace SHOGL {
 	void Cleanup()
 	{
 		// glDeleteBuffers on VBA's and IBA's
-		// glDeleteTextures
 		for (UINT i = 0; i < NumMeshes; i++) {
 			if(meshes[i].VBA > 0) glDeleteBuffers(1, &meshes[i].VBA);
 			if(meshes[i].IBA > 0)  glDeleteBuffers(1, &meshes[i].IBA);
-			if(meshes[i].TextureId > 0) glDeleteTextures(1, &meshes[i].TextureId);
+			//if(meshes[i].TextureId > 0) glDeleteTextures(1, &meshes[i].TextureId);
+		}
+		// glDeleteTextures
+		for (TextureIdType p : TextureMap) {
+			GLuint TexId = p.second;
+			glDeleteTextures(1, &TexId);
 		}
 		if (meshes != nullptr) free(meshes);
 		if (g_hdc != nullptr) {
@@ -383,18 +392,29 @@ namespace SHOGL {
 			meshes[c].NumIndexes = m->NumIndexes;
 			meshes[c].Winding = (m->winding == DDDCOMMON::MeshConfigWinding::Clockwise ? GL_CW : GL_CCW);
 			meshes[c].model = m->model;
-
-			if (m->TextureFilename.length() > 0)
-			{
-				glGenTextures(1, &meshes[c].TextureId);
-				TextureLoad(m->TextureFilename.c_str(), GL_TEXTURE_2D, meshes[c].TextureId);
-			}
+			meshes[c].MeshTextureId = m->TextureId;
 
 		}
 
 		free(VBAArray);
 		free(IBAArray);
 
+		return TRUE;
+	}
+
+	BOOL InitTextures(std::vector<std::string> TextureFilenameList)
+	{
+		if (TextureFilenameList.size() < 1) return TRUE;
+		GLuint* temp = (GLuint*)malloc(TextureFilenameList.size() * sizeof(GLuint));
+		if (temp == nullptr) return FALSE;
+		memset(temp, 0, TextureFilenameList.size() * sizeof(GLuint));
+		glGenTextures(TextureFilenameList.size(), temp);
+		for (int i = 0; i < TextureFilenameList.size(); i++) {
+			TextureLoad(TextureFilenameList[i].c_str(), GL_TEXTURE_2D, temp[i]);
+			TextureIdType p(i, temp[i]);
+			TextureMap.insert(p);
+		}
+		free(temp);
 		return TRUE;
 	}
 }
