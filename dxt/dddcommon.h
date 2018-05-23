@@ -47,6 +47,7 @@ namespace DDDCOMMON {
 	void CleanupTriangleMeshConfig(TriangleMeshConfig* c);
 	void ReverseWinding(TriangleMeshConfig* config);
 	void CalculateBoundingBox(TriangleMeshConfig* config);
+	void CreateRoom(float ox, float oy, float oz, float dx, float dy, float dz, TriangleMeshConfig *config);
 
 	//BOOL SetupDirectInput(HINSTANCE hInst, HWND hWnd);
 	//void CleanupDirectInput();

@@ -358,5 +358,170 @@ namespace DDDCOMMON {
 			if (config->positions[i].z < config->bbox.zmin) config->bbox.zmin = config->positions[i].z;
 		}
 	}
+
+	enum Axis {
+		XAXIS,
+		YAXIS,
+		ZAXIS
+	};
+
+	enum NormalDir {
+		Negative,
+		Positive
+	};
+
+	void MakePlane(float ox, float oy, float oz,
+		float d1, float d2, Axis axis, NormalDir ndir,
+		glm::vec3* p, glm::vec3* n, glm::vec2* t)
+	{
+		t[0] = glm::vec2(0.0f, 0.0f);
+		t[1] = glm::vec2(1.0f, 0.0f);
+		t[2] = glm::vec2(0.0f, 1.0f);
+		t[3] = glm::vec2(1.0f, 0.0f);
+		t[4] = glm::vec2(1.0f, 1.0f);
+		t[5] = glm::vec2(0.0f, 1.0f);
+		if (axis == ZAXIS) {
+			if (ndir == Positive) {
+				p[0] = glm::vec3(ox, oy, oz);
+				p[1] = glm::vec3(ox + d1, oy, oz);
+				p[2] = glm::vec3(ox, oy + d2, oz);
+				p[3] = glm::vec3(ox + d1, oy, oz);
+				p[4] = glm::vec3(ox + d1, oy + d2, oz);
+				p[5] = glm::vec3(ox, oy + d2, oz);
+				n[0] = glm::vec3(0.0f, 0.0f, 1.0f);
+				n[1] = glm::vec3(0.0f, 0.0f, 1.0f);
+				n[2] = glm::vec3(0.0f, 0.0f, 1.0f);
+				n[3] = glm::vec3(0.0f, 0.0f, 1.0f);
+				n[4] = glm::vec3(0.0f, 0.0f, 1.0f);
+				n[5] = glm::vec3(0.0f, 0.0f, 1.0f);
+			}
+			else {
+				p[0] = glm::vec3(ox + d1, oy, oz);
+				p[1] = glm::vec3(ox, oy, oz);
+				p[2] = glm::vec3(ox + d1, oy + d2, oz);
+				p[3] = glm::vec3(ox, oy, oz);
+				p[4] = glm::vec3(ox, oy + d2, oz);
+				p[5] = glm::vec3(ox + d1, oy + d2, oz);
+				n[0] = glm::vec3(0.0f, 0.0f, -1.0f);
+				n[1] = glm::vec3(0.0f, 0.0f, -1.0f);
+				n[2] = glm::vec3(0.0f, 0.0f, -1.0f);
+				n[3] = glm::vec3(0.0f, 0.0f, -1.0f);
+				n[4] = glm::vec3(0.0f, 0.0f, -1.0f);
+				n[5] = glm::vec3(0.0f, 0.0f, -1.0f);
+			}
+		}
+		else if (axis == YAXIS) {
+			if (ndir == Positive) {
+				p[0] = glm::vec3(ox, oy, oz);
+				p[1] = glm::vec3(ox, oy, oz + d1);
+				p[2] = glm::vec3(ox + d2, oy, oz);
+				p[3] = glm::vec3(ox, oy, oz + d1);
+				p[4] = glm::vec3(ox + d2, oy, oz + d1);
+				p[5] = glm::vec3(ox + d2, oy, oz);
+				n[0] = glm::vec3(0.0f, 1.0f, 0.0f);
+				n[1] = glm::vec3(0.0f, 1.0f, 0.0f);
+				n[2] = glm::vec3(0.0f, 1.0f, 0.0f);
+				n[3] = glm::vec3(0.0f, 1.0f, 0.0f);
+				n[4] = glm::vec3(0.0f, 1.0f, 0.0f);
+				n[5] = glm::vec3(0.0f, 1.0f, 0.0f);
+			}
+			else {
+				p[0] = glm::vec3(ox, oy, oz + d1);
+				p[1] = glm::vec3(ox, oy, oz);
+				p[2] = glm::vec3(ox + d2, oy, oz + d1);
+				p[3] = glm::vec3(ox, oy, oz);
+				p[4] = glm::vec3(ox + d2, oy, oz);
+				p[5] = glm::vec3(ox + d2, oy, oz + d1);
+				n[0] = glm::vec3(0.0f, -1.0f, 0.0f);
+				n[1] = glm::vec3(0.0f, -1.0f, 0.0f);
+				n[2] = glm::vec3(0.0f, -1.0f, 0.0f);
+				n[3] = glm::vec3(0.0f, -1.0f, 0.0f);
+				n[4] = glm::vec3(0.0f, -1.0f, 0.0f);
+				n[5] = glm::vec3(0.0f, -1.0f, 0.0f);
+			}
+		}
+		else {
+			if (ndir == Positive) {
+				p[0] = glm::vec3(ox, oy, oz);
+				p[1] = glm::vec3(ox, oy + d1, oz);
+				p[2] = glm::vec3(ox, oy, oz + d2);
+				p[3] = glm::vec3(ox, oy + d1, oz);
+				p[4] = glm::vec3(ox, oy + d1, oz + d2);
+				p[5] = glm::vec3(ox, oy, oz + d2);
+				n[0] = glm::vec3(1.0f, 0.0f, 0.0f);
+				n[1] = glm::vec3(1.0f, 0.0f, 0.0f);
+				n[2] = glm::vec3(1.0f, 0.0f, 0.0f);
+				n[3] = glm::vec3(1.0f, 0.0f, 0.0f);
+				n[4] = glm::vec3(1.0f, 0.0f, 0.0f);
+				n[5] = glm::vec3(1.0f, 0.0f, 0.0f);
+			}
+			else {
+				p[0] = glm::vec3(ox, oy + d1, oz);
+				p[1] = glm::vec3(ox, oy, oz);
+				p[2] = glm::vec3(ox, oy + d1, oz + d2);
+				p[3] = glm::vec3(ox, oy, oz);
+				p[4] = glm::vec3(ox, oy, oz + d2);
+				p[5] = glm::vec3(ox, oy + d1, oz + d2);
+				n[0] = glm::vec3(-1.0f, 0.0f, 0.0f);
+				n[1] = glm::vec3(-1.0f, 0.0f, 0.0f);
+				n[2] = glm::vec3(-1.0f, 0.0f, 0.0f);
+				n[3] = glm::vec3(-1.0f, 0.0f, 0.0f);
+				n[4] = glm::vec3(-1.0f, 0.0f, 0.0f);
+				n[5] = glm::vec3(-1.0f, 0.0f, 0.0f);
+			}
+		}
+	}
+
+	void MakeBox(
+		float ox, float oy, float oz, 
+		float dx, float dy, float dz,
+		glm::vec3* p, glm::vec3* n, glm::vec2* t)
+	{
+		MakePlane(ox, oy, oz, dx, dy, ZAXIS, Negative, p, n, t);
+		MakePlane(ox, oy, oz + dz, dx, dy, ZAXIS, Positive, p + 6, n + 6, t + 6);
+		MakePlane(ox, oy, oz, dy, dz, XAXIS, Negative, p + 12, n + 12, t + 12);
+		MakePlane(ox + dx, oy, oz, dy, dz, XAXIS, Positive, p + 18, n + 18, t + 18);
+		MakePlane(ox, oy, oz, dz, dx, YAXIS, Negative, p + 24, n + 24, t + 24);
+		MakePlane(ox, oy + dy, oz, dz, dx, YAXIS, Positive, p + 30, n + 30, t + 30);
+	}
+
+	void CreateRoom(float ox, float oy, float oz, float dx, float dy, float dz, TriangleMeshConfig *config)
+	{
+		config->NumPositions = config->NumNormals = config->NumTexCoords = config->NumIndexes = 216;
+
+		UINT nrmMem = config->NumNormals * sizeof(glm::vec3);
+		config->normals = (glm::vec3*)malloc(nrmMem);
+		memset(config->normals, 0, nrmMem);
+
+		UINT posMem = config->NumPositions * sizeof(glm::vec3);
+		config->positions = (glm::vec3*)malloc(posMem);
+		memset(config->positions, 0, posMem);
+
+		UINT crdMem = config->NumTexCoords * sizeof(glm::vec2);
+		config->texcoords = (glm::vec2*)malloc(crdMem);
+		memset(config->texcoords, 0, crdMem);
+
+		UINT idxMem = config->NumIndexes * sizeof(USHORT);
+		config->indexes = (USHORT*)malloc(idxMem);
+		memset(config->indexes, 0, idxMem);
+
+		// ceil
+		MakeBox(ox - 0.5f, oy - 0.5f, oz - 0.5f, dx + 1.0f, 0.5f, dz + 1.0f, config->positions, config->normals, config->texcoords);
+
+		// flr
+		MakeBox(ox - 0.5f, oy + dy, oz - 0.5f, dx + 1.0f, 0.5f, dz + 1.0f, config->positions + 36, config->normals + 36, config->texcoords + 36);
+
+		// front/back
+		MakeBox(ox - 0.5f, oy, oz - 0.5f, dx + 1.0f, dy, 0.5f, config->positions + 72, config->normals + 72, config->texcoords + 72);
+		MakeBox(ox - 0.5f, oy, oz + dz, dx + 1.0f, dy, 0.5f, config->positions + 108, config->normals + 108, config->texcoords + 108);
+
+		// left/right
+		MakeBox(ox - 0.5f, oy, oz, 0.5f, dy, dz, config->positions + 144, config->normals + 144, config->texcoords + 144);
+		MakeBox(ox + dx, oy, oz, 0.5f, dy, dz, config->positions + 180, config->normals + 180, config->texcoords + 180);
+
+		for (int i = 0; i < config->NumIndexes; i++) config->indexes[i] = i;
+	}
+
+
 }
 

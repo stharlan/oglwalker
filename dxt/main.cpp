@@ -60,7 +60,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	LARGE_INTEGER pThisTime;
 	char TitleText[256];
 
-	DDDCOMMON::TriangleMeshConfig m[2];
+	DDDCOMMON::TriangleMeshConfig m[3];
 	memset(&m[0], 0, 2 * sizeof(DDDCOMMON::TriangleMeshConfig));
 	DDDCOMMON::LoadTriangleMeshFromGLB("cat.glb", &m[0]);
 	DDDCOMMON::CalculateBoundingBox(&m[0]);
@@ -74,10 +74,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[0].TextureId = 0;
 	
 	glm::vec3 positions[] = {
-		glm::vec3(-50, 0, -50),
-		glm::vec3(50, 0, -50),
-		glm::vec3(50, 0, 50),
-		glm::vec3(-50, 0, 50)
+		glm::vec3(-50, -10, -50),
+		glm::vec3(50, -10, -50),
+		glm::vec3(50, -10, 50),
+		glm::vec3(-50, -10, 50)
 	};
 	glm::vec3 normals[] = {
 		glm::vec3(0, 1, 0),
@@ -107,6 +107,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 
 	const char* TextureList[] = { "redpix.png", "wp512.jpg" };
 	std::vector<std::string> TextureVector(TextureList, std::end(TextureList));
+
+	DDDCOMMON::CreateRoom(-25.0f, 0.0f, -25.0f, 50.0f, 8.0f, 50.0f, &m[2]);
+	m[2].model = glm::mat4x4(1.0f);
+	m[2].winding = DDDCOMMON::MeshConfigWinding::CounterClockwise;
+	m[2].TextureId = 1;
 
 	WNDCLASSEX wcex = {};
 	wcex.cbClsExtra = 0;
@@ -148,7 +153,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 #ifdef USING_OPENGL
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
-	if (FALSE == SHOGL::InitGraphicsA(&m[0], 2)) return 0;
+	if (FALSE == SHOGL::InitGraphicsA(&m[0], 3)) return 0;
 	if (FALSE == SHOGL::InitTextures(TextureVector)) return 0;
 #endif
 #ifdef USING_DIRECTX11
