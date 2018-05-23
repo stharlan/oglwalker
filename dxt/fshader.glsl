@@ -3,6 +3,7 @@
 in vec2 TexCoord0;
 in vec4 Color0;
 in vec3 Normal0;
+in float LightMag;
 
 out vec4 FragColor;
 
@@ -27,4 +28,6 @@ void main()
 	vec4 Diffuse = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	vec4 TexColor = texture2D(gSampler, TexCoord0.xy);
 	FragColor = (TexColor * Ambient) + clamp(dot(Dir, Normal0) * Diffuse * Color0, 0.0f, 1.0f);
+
+	//FragColor = LightMag * texture2D(gSampler, TexCoord0.xy);
 }

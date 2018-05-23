@@ -36,6 +36,7 @@ namespace SHOGL {
 	GLuint NumMeshes = 0;
 	GLuint ShaderProgram = 0;
 	GLuint WorldLocation = 0;
+	GLuint EyeNormalId = 0;
 	GLuint gSampler = 0;
 
 	typedef struct {
@@ -211,6 +212,8 @@ namespace SHOGL {
 
 		WorldLocation = glGetUniformLocation(ShaderProgram, "gWorld");
 
+		EyeNormalId = glGetUniformLocation(ShaderProgram, "gEye");
+
 		gSampler = glGetUniformLocation(ShaderProgram, "gSampler");
 
 		glUniform1i(gSampler, 0);
@@ -222,11 +225,13 @@ namespace SHOGL {
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		glm::vec3 EyeNormal = glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), loc.ey - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth)));
+
 		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
 			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 500.0f)
 			* glm::lookAt(
 				glm::vec3(loc.ex, loc.ey, loc.ez),
-				glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), loc.ey - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth))),
+				EyeNormal,
 				glm::vec3(0.0f, 1.0f, 0.0));
 
 		for (UINT MeshIndex = 0; MeshIndex < NumMeshes; MeshIndex++) {
@@ -235,6 +240,8 @@ namespace SHOGL {
 
 			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * meshes[MeshIndex].model;			
 			glUniformMatrix4fv(WorldLocation, 1, GL_FALSE, &ThisWorld[0][0]);
+
+			glUniform3fv(EyeNormalId, 1, &EyeNormal[0]);
 
 			glEnableVertexAttribArray(0);
 			glEnableVertexAttribArray(1);
