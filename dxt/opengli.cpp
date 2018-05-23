@@ -25,8 +25,8 @@ namespace SHOGL {
 	HGLRC g_hglrc = nullptr;
 
 	struct TriangleMesh {
-		GLuint VBA;
-		GLuint IBA;
+		UINT VBAIndex;
+		UINT IBAIndex;
 		GLuint NumIndexes;
 		GLenum Winding;
 		glm::mat4x4 model;
@@ -49,8 +49,11 @@ namespace SHOGL {
 
 	unsigned int gScreenWidth = 0, gScreenHeight = 0;
 
-	typedef std::pair<UINT, GLuint> TextureIdType;
-	std::map<UINT, GLuint> TextureMap;
+	GLuint* lpTexA = nullptr;
+	UINT NumTextures = 0;
+
+	GLuint *VIBufferArray = nullptr;
+	UINT NumVIBuffers = 0;
 
 	bool TextureLoad(const char* m_fileName, GLenum m_textureTarget, GLuint TextureObjectId)
 	{
@@ -215,45 +218,6 @@ namespace SHOGL {
 		return TRUE;
 	}
 
-	//BOOL InitGraphics(void)
-	//{
-	//	glmvec12 GeometryVertices[] =
-	//	{
-	//		{ glm::vec3(-5.0f, -5.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
-	//		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
-	//		{ glm::vec3(5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
-	//		{ glm::vec3(5.0f, -5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
-	//		{ glm::vec3(-5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
-	//		{ glm::vec3(5.0f,  5.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f) },
-
-	//		{ glm::vec3(-10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f) },
-	//		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
-	//		{ glm::vec3(10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
-	//		{ glm::vec3(10.0f, -5.0f,  10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f) },
-	//		{ glm::vec3(-10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f) },
-	//		{ glm::vec3(10.0f, -5.0f, -10.0f), glm::vec4(1.0f, 0.0f, 1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f) }
-	//	};
-
-	//	glGenBuffers(1, &VBA);
-	//	glBindBuffer(GL_ARRAY_BUFFER, VBA);
-	//	glBufferData(GL_ARRAY_BUFFER, sizeof(GeometryVertices), GeometryVertices, GL_STATIC_DRAW);
-
-	//	unsigned int IndexArray[] = {
-	//		0, 1, 2,
-	//		3, 4, 5,
-	//		6, 7, 8,
-	//		9, 10, 11
-	//	};
-
-	//	glGenBuffers(1, &IBA);
-	//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBA);
-	//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(IndexArray), IndexArray, GL_STATIC_DRAW);
-
-	//	NumIndices = 12;
-
-	//	return TRUE;
-	//}
-
 	BOOL RenderFrame(void)
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -279,11 +243,10 @@ namespace SHOGL {
 
 			glActiveTexture(GL_TEXTURE0);
 
-			GLuint TexGlUint = TextureMap.at(meshes[MeshIndex].MeshTextureId);
-			glBindTexture(GL_TEXTURE_2D, TexGlUint);
+			glBindTexture(GL_TEXTURE_2D, lpTexA[meshes[MeshIndex].MeshTextureId]);
 
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshes[MeshIndex].IBA);
-			glBindBuffer(GL_ARRAY_BUFFER, meshes[MeshIndex].VBA);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VIBufferArray[meshes[MeshIndex].IBAIndex]);
+			glBindBuffer(GL_ARRAY_BUFFER, VIBufferArray[meshes[MeshIndex].VBAIndex]);
 
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)0);
 			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)12);
@@ -312,17 +275,8 @@ namespace SHOGL {
 
 	void Cleanup()
 	{
-		// glDeleteBuffers on VBA's and IBA's
-		for (UINT i = 0; i < NumMeshes; i++) {
-			if(meshes[i].VBA > 0) glDeleteBuffers(1, &meshes[i].VBA);
-			if(meshes[i].IBA > 0)  glDeleteBuffers(1, &meshes[i].IBA);
-			//if(meshes[i].TextureId > 0) glDeleteTextures(1, &meshes[i].TextureId);
-		}
-		// glDeleteTextures
-		for (TextureIdType p : TextureMap) {
-			GLuint TexId = p.second;
-			glDeleteTextures(1, &TexId);
-		}
+		glDeleteBuffers(NumVIBuffers, VIBufferArray);
+		glDeleteTextures(NumTextures, lpTexA);
 		if (meshes != nullptr) free(meshes);
 		if (g_hdc != nullptr) {
 			wglMakeCurrent(g_hdc, nullptr);
@@ -338,8 +292,6 @@ namespace SHOGL {
 	BOOL InitGraphicsA(DDDCOMMON::TriangleMeshConfig* configs, int NumConfigs)
 	{
 
-		GLuint *VBAArray = nullptr; 
-		GLuint *IBAArray = nullptr;
 		glmvec12 *GeometryVertices = nullptr;
 		UINT* IndexArray = nullptr;
 
@@ -347,13 +299,9 @@ namespace SHOGL {
 		memset(meshes, 0, NumConfigs * sizeof(TriangleMesh));
 		NumMeshes = NumConfigs;
 
-		VBAArray = (GLuint*)malloc(NumConfigs * sizeof(GLuint));
-		memset(VBAArray, 0, NumConfigs * sizeof(GLuint));
-		glGenBuffers(NumConfigs, VBAArray);
-
-		IBAArray = (GLuint*)malloc(NumConfigs * sizeof(GLuint));
-		memset(IBAArray, 0, NumConfigs * sizeof(GLuint));
-		glGenBuffers(NumConfigs, IBAArray);
+		VIBufferArray = (GLuint*)malloc(NumConfigs * 2 * sizeof(GLuint));
+		memset(VIBufferArray, 0, NumConfigs * 2 * sizeof(GLuint));
+		glGenBuffers(NumConfigs * 2, VIBufferArray);
 
 		for (int c = 0; c < NumConfigs; c++) {
 
@@ -373,9 +321,9 @@ namespace SHOGL {
 				}
 			}
 
-			glBindBuffer(GL_ARRAY_BUFFER, VBAArray[c]);
+			glBindBuffer(GL_ARRAY_BUFFER, VIBufferArray[c]);
 			glBufferData(GL_ARRAY_BUFFER, m->NumPositions * sizeof(glmvec12), GeometryVertices, GL_STATIC_DRAW);
-			meshes[c].VBA = VBAArray[c];
+			meshes[c].VBAIndex = c;
 
 			free(GeometryVertices);
 
@@ -383,9 +331,9 @@ namespace SHOGL {
 			memset(IndexArray, 0, m->NumIndexes * sizeof(UINT));
 			for (UINT i = 0; i < m->NumIndexes; i++) IndexArray[i] = m->indexes[i];
 
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBAArray[c]);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VIBufferArray[NumConfigs + c]);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, m->NumIndexes * sizeof(UINT), IndexArray, GL_STATIC_DRAW);
-			meshes[c].IBA = IBAArray[c];
+			meshes[c].IBAIndex = NumConfigs + c;
 
 			free(IndexArray);
 
@@ -396,8 +344,7 @@ namespace SHOGL {
 
 		}
 
-		free(VBAArray);
-		free(IBAArray);
+		NumVIBuffers = NumConfigs;
 
 		return TRUE;
 	}
@@ -405,16 +352,14 @@ namespace SHOGL {
 	BOOL InitTextures(std::vector<std::string> TextureFilenameList)
 	{
 		if (TextureFilenameList.size() < 1) return TRUE;
-		GLuint* temp = (GLuint*)malloc(TextureFilenameList.size() * sizeof(GLuint));
-		if (temp == nullptr) return FALSE;
-		memset(temp, 0, TextureFilenameList.size() * sizeof(GLuint));
-		glGenTextures(TextureFilenameList.size(), temp);
+		lpTexA = (GLuint*)malloc(TextureFilenameList.size() * sizeof(GLuint));
+		if (lpTexA == nullptr) return FALSE;
+		memset(lpTexA, 0, TextureFilenameList.size() * sizeof(GLuint));
+		glGenTextures(TextureFilenameList.size(), lpTexA);
 		for (int i = 0; i < TextureFilenameList.size(); i++) {
-			TextureLoad(TextureFilenameList[i].c_str(), GL_TEXTURE_2D, temp[i]);
-			TextureIdType p(i, temp[i]);
-			TextureMap.insert(p);
+			TextureLoad(TextureFilenameList[i].c_str(), GL_TEXTURE_2D, lpTexA[i]);
 		}
-		free(temp);
+		NumTextures = TextureFilenameList.size();
 		return TRUE;
 	}
 }
