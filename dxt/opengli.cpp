@@ -34,9 +34,10 @@ namespace SHOGL {
 	};
 	TriangleMesh *meshes = nullptr;
 	GLuint NumMeshes = 0;
-	GLuint ShaderProgram = 0;
-	GLuint WorldLocation = 0;
-	GLuint EyeNormalId = 0;
+	GLuint gShaderProgram = 0;
+	GLuint gPerspectiveViewMatrix = 0;
+	GLuint gModelMatrix = 0;
+	GLuint gLightPosId = 0;
 	GLuint gSampler = 0;
 
 	typedef struct {
@@ -159,12 +160,14 @@ namespace SHOGL {
 
 		sourceCode = DDDCOMMON::ReadTextFile(vsFilename, &sourceSize);
 		if (FALSE == AddShader(ShaderProgram, sourceCode, GL_VERTEX_SHADER)) {
+			MessageBox(nullptr, "Vertex shader failed to compile.", "ERROR", MB_OK);
 			free(sourceCode);
 			return FALSE;
 		}
 
 		sourceCode = DDDCOMMON::ReadTextFile(fsFilename, &sourceSize);
 		if (FALSE == AddShader(ShaderProgram, sourceCode, GL_FRAGMENT_SHADER)) {
+			MessageBox(nullptr, "Pixel shader failed to compile.", "ERROR", MB_OK);
 			free(sourceCode);
 			return FALSE;
 		}
@@ -208,13 +211,15 @@ namespace SHOGL {
 		glCullFace(GL_BACK);
 		glEnable(GL_CULL_FACE);
 
-		if (FALSE == CompileShaders("vshader.glsl", "fshader.glsl", &ShaderProgram)) return FALSE;
+		if (FALSE == CompileShaders("vshader.glsl", "fshader.glsl", &gShaderProgram)) return FALSE;
 
-		WorldLocation = glGetUniformLocation(ShaderProgram, "gWorld");
+		gPerspectiveViewMatrix = glGetUniformLocation(gShaderProgram, "gPerspectiveViewMatrix");
 
-		EyeNormalId = glGetUniformLocation(ShaderProgram, "gEye");
+		gModelMatrix = glGetUniformLocation(gShaderProgram, "gModelMatrix");
 
-		gSampler = glGetUniformLocation(ShaderProgram, "gSampler");
+		gLightPosId = glGetUniformLocation(gShaderProgram, "gLightPos");
+
+		gSampler = glGetUniformLocation(gShaderProgram, "gSampler");
 
 		glUniform1i(gSampler, 0);
 
@@ -234,14 +239,18 @@ namespace SHOGL {
 				EyeNormal,
 				glm::vec3(0.0f, 1.0f, 0.0));
 
+		// set the perspective view matrix
+		glUniformMatrix4fv(gPerspectiveViewMatrix, 1, GL_FALSE, &unTransposedWorldMatrix[0][0]);
+
+		glm::vec3 LightPos(0.0f, 4.0f, 0.0f);
+		glUniform3fv(gLightPosId, 1, &LightPos[0]);
+
 		for (UINT MeshIndex = 0; MeshIndex < NumMeshes; MeshIndex++) {
 
 			glFrontFace(meshes[MeshIndex].Winding);
 
-			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * meshes[MeshIndex].model;			
-			glUniformMatrix4fv(WorldLocation, 1, GL_FALSE, &ThisWorld[0][0]);
-
-			glUniform3fv(EyeNormalId, 1, &EyeNormal[0]);
+			// set the model matrix
+			glUniformMatrix4fv(gModelMatrix, 1, GL_FALSE, &meshes[MeshIndex].model[0][0]);
 
 			glEnableVertexAttribArray(0);
 			glEnableVertexAttribArray(1);

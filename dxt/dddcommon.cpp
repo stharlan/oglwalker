@@ -477,6 +477,7 @@ namespace DDDCOMMON {
 		float dx, float dy, float dz,
 		glm::vec3* p, glm::vec3* n, glm::vec2* t)
 	{
+
 		MakePlane(ox, oy, oz, dx, dy, ZAXIS, Negative, p, n, t);
 		MakePlane(ox, oy, oz + dz, dx, dy, ZAXIS, Positive, p + 6, n + 6, t + 6);
 		MakePlane(ox, oy, oz, dy, dz, XAXIS, Negative, p + 12, n + 12, t + 12);

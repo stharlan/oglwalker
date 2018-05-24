@@ -1,6 +1,6 @@
 
-//#define USING_DIRECTX11
-#define USING_OPENGL
+#define USING_DIRECTX11
+//#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -67,17 +67,18 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 
 	m[0].winding = DDDCOMMON::MeshConfigWinding::CounterClockwise;
 	// SRT scale rotate translate (opposite multiply?)
-	m[0].model = glm::mat4x4(1.0f) 
+	m[0].model = glm::mat4x4(1.0f)
 		* glm::translate(glm::vec3(0.0f, -1.0f * m[0].bbox.ymin, -20.0f))
-		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f));
+		* glm::scale(glm::vec3(1.0f, 1.0f, 1.0f))
+		* glm::rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	//m[0].TextureFilename = std::string("redpix.png");
 	m[0].TextureId = 0;
 	
 	glm::vec3 positions[] = {
-		glm::vec3(-50, -10, -50),
-		glm::vec3(50, -10, -50),
-		glm::vec3(50, -10, 50),
-		glm::vec3(-50, -10, 50)
+		glm::vec3(-50, 0, -50),
+		glm::vec3(50, 0, -50),
+		glm::vec3(50, 0, 50),
+		glm::vec3(-50, 0, 50)
 	};
 	glm::vec3 normals[] = {
 		glm::vec3(0, 1, 0),
@@ -153,18 +154,19 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 #ifdef USING_OPENGL
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
-	if (FALSE == SHOGL::InitGraphicsA(&m[0], 3)) return 0;
+	if (FALSE == SHOGL::InitGraphicsA(&m[0], 2)) return 0;
 	if (FALSE == SHOGL::InitTextures(TextureVector)) return 0;
 #endif
 #ifdef USING_DIRECTX11
 	if (FALSE == SHDX11::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHDX11::InitPipeline()) return 0;
 	if (FALSE == SHDX11::InitGraphicsA(&m[0], 2)) return 0;
-	//if (FALSE == SHDX11::InitTextures()) return 0;
+	if (FALSE == SHOGL::InitTextures(TextureVector)) return 0;
 #endif
 
 	DDDCOMMON::CleanupTriangleMeshConfig(&m[0]);
 	//DDDCOMMON::CleanupTriangleMeshConfig(&m[1]);
+	DDDCOMMON::CleanupTriangleMeshConfig(&m[2]);
 
 	QueryPerformanceFrequency(&pFreq);
 	QueryPerformanceCounter(&pLast);

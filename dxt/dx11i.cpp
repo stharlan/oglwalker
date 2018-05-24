@@ -36,17 +36,19 @@ namespace SHDX11 {
 
 	ID3D11RasterizerState *pRastStateCW = nullptr;
 	ID3D11RasterizerState *pRastStateCCW = nullptr;
+	
+	// need an array of ID3D11Texture2D* and ID3D11ShaderResourceView*
+	UINT NumTextures = 0;
+	ID3D11Texture2D** lppTexture2DArray = nullptr;
+	ID3D11ShaderResourceView** lppTextureResViewArray = nullptr;
 
 	struct VertexBufferContext {
 		ID3D11Buffer *lpVertexBuffer = nullptr;
 		ID3D11Buffer *lpIndexBuffer = nullptr;
 		UINT NumIndexes = 0;
-		// winding?
 		BOOL isCCW;
 		glm::mat4x4 model;
-		ID3D11Texture2D *pTextureResource = nullptr;
-		ID3D11ShaderResourceView *pTextureResView = nullptr;
-		UINT NumTextures = 0;
+		UINT GlobalTextureId;
 	};
 	VertexBufferContext* VertexBufferContexts = nullptr;
 	UINT NumVertexBuffers = 0;
@@ -351,7 +353,7 @@ namespace SHDX11 {
 		return TRUE;
 	}
 
-	BOOL InitTextures(std::string& filename, ID3D11Texture2D **ppTextureResource, ID3D11ShaderResourceView **ppTextureResView)
+	BOOL InitTexture(std::string& filename, ID3D11Texture2D **ppTextureResource, ID3D11ShaderResourceView **ppTextureResView)
 	{
 		size_t maxsize;
 		Magick::Image m_image;
@@ -586,10 +588,7 @@ namespace SHDX11 {
 
 			VertexBufferContexts[c].model = configs[c].model;
 
-			// move init textures to separate method
-			//InitTextures(configs[c].TextureFilename,
-				//&VertexBufferContexts[c].pTextureResource,
-				//&VertexBufferContexts[c].pTextureResView);
+			VertexBufferContexts[c].GlobalTextureId = configs[c].TextureId;
 
 		}
 
@@ -654,7 +653,7 @@ namespace SHDX11 {
 
 			lpDevcon->RSSetState(VertexBufferContexts[vi].isCCW ? pRastStateCCW : pRastStateCW);
 
-			lpDevcon->PSSetShaderResources(0, 1, &VertexBufferContexts[vi].pTextureResView);
+			lpDevcon->PSSetShaderResources(0, 1, &lppTextureResViewArray[VertexBufferContexts[vi].GlobalTextureId]);
 
 			// set the world matrix
 			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * VertexBufferContexts[vi].model;
@@ -684,12 +683,17 @@ namespace SHDX11 {
 	{
 		if (lpSwapchain) lpSwapchain->SetFullscreenState(FALSE, NULL);
 
+		if (lppTextureResViewArray && lppTexture2DArray) {
+			for (int i = 0; i < NumTextures; i++) {
+				if (lppTextureResViewArray[i]) lppTextureResViewArray[i]->Release();
+				if (lppTexture2DArray[i]) lppTexture2DArray[i]->Release();
+			}
+			free(lppTextureResViewArray);
+			free(lppTexture2DArray);
+		}
+
 		if (VertexBufferContexts) {
 			for (UINT i = 0; i < NumVertexBuffers; i++) {
-				if (VertexBufferContexts[i].pTextureResource)
-					VertexBufferContexts[i].pTextureResource->Release();
-				if (VertexBufferContexts[i].pTextureResView)
-					VertexBufferContexts[i].pTextureResView->Release();
 				if (VertexBufferContexts[i].lpVertexBuffer)
 					VertexBufferContexts[i].lpVertexBuffer->Release();
 				if (VertexBufferContexts[i].lpIndexBuffer)
@@ -718,6 +722,31 @@ namespace SHDX11 {
 		//	ddebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
 		//	ddebug->Release();			
 		//}
+	}
+
+	BOOL InitTextures(std::vector<std::string> TextureFilenameList)
+	{
+		if (TextureFilenameList.size() < 1) return TRUE;
+
+		lppTexture2DArray = (ID3D11Texture2D**)malloc(TextureFilenameList.size() * sizeof(ID3D11Texture2D*));
+		memset(lppTexture2DArray, 0, TextureFilenameList.size() * sizeof(ID3D11Texture2D*));
+		if (lppTexture2DArray == nullptr) return FALSE;
+
+		lppTextureResViewArray = (ID3D11ShaderResourceView**)malloc(TextureFilenameList.size() * sizeof(ID3D11ShaderResourceView*));
+		memset(lppTextureResViewArray, 0, TextureFilenameList.size() * sizeof(ID3D11ShaderResourceView*));
+		if (lppTextureResViewArray == nullptr) {
+			free(lppTexture2DArray);
+			lppTexture2DArray = nullptr;
+			return FALSE;
+		}
+
+		for (int i = 0; i < TextureFilenameList.size(); i++) {
+			InitTexture(TextureFilenameList[i], lppTexture2DArray + i, lppTextureResViewArray + i);
+		}
+
+		NumTextures = TextureFilenameList.size();
+
+		return TRUE;
 	}
 
 }
