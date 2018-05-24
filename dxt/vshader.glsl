@@ -45,6 +45,7 @@ void main()
 	// if multiple lights, sum the light mag's
 	// and max to zero
 	// result of dot'ing these two will be -1 to 1
-	LightMag = max(dot(NormLightVector, TransNormal),0.0f) * lmult;
+	//LightMag = max(dot(NormLightVector, TransNormal),0.0f) * lmult;
+	LightMag = max(dot(NormLightVector, TransNormal),0.0f);
 
 }
