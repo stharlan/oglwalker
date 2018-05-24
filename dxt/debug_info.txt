@@ -1,1 +1,1 @@
-C:\Users\winadmin\documents\visual studio 2017\Projects\OglWalker\dxt
+C:\Users\harlas1\Source\Repos\oglwalker\dxt

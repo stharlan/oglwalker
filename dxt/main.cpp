@@ -1,6 +1,6 @@
 
-#define USING_DIRECTX11
-//#define USING_OPENGL
+//#define USING_DIRECTX11
+#define USING_OPENGL
 #define GLM_ENABLE_EXPERIMENTAL
 
 #pragma comment (lib, "d3d11.lib")
@@ -23,6 +23,7 @@
 #include "dddcommon.h"
 #include "dx11i.h"
 #include "opengli.h"
+#include "ply.h"
 
 // define the screen resolution
 #define SCREEN_WIDTH  640
@@ -59,6 +60,58 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 
 	LARGE_INTEGER pThisTime;
 	char TitleText[256];
+
+	int nelems = 0;
+	char **elem_names = nullptr;
+	int file_type = 0;
+	float version = 0.0f;
+	char plyfileName[] = "bun_zipper.ply";
+	
+	PlyFile* plyfile = ply_open_for_reading(plyfileName, &nelems, &elem_names, &file_type, &version);
+	if (plyfile) {
+		std::ofstream pfdbg("ply_debug.txt");
+		pfdbg << "number of elements " << nelems << std::endl;
+		for (int pi = 0; pi < nelems; pi++) {
+			pfdbg << "elem " << elem_names[pi] << std::endl;
+			int nelems1 = 0;
+			int nprops = 0;
+			
+			PlyProperty** lpProp = ply_get_element_description(plyfile, elem_names[pi], &nelems1, &nprops);
+			pfdbg << "\tnum elems " << nelems1 << std::endl;
+			pfdbg << "\tnum props " << nprops << std::endl;
+			for (int pp = 0; pp < nprops; pp++) {
+				pfdbg << "\t\t" << lpProp[pp]->name << std::endl;
+				pfdbg << "\t\t" << lpProp[pp]->is_list << " <= 1 = list; 0 = scalar;" <<  std::endl;
+				pfdbg << "\t\t offset " << lpProp[pp]->offset << std::endl;
+				pfdbg << "\t\t count ext " << lpProp[pp]->count_external << std::endl;
+				pfdbg << "\t\t count int " << lpProp[pp]->count_internal << std::endl;
+				pfdbg << "\t\t count offst " << lpProp[pp]->count_offset << std::endl;
+				pfdbg << "\t\t ext type " << lpProp[pp]->external_type << std::endl;
+				pfdbg << "\t\t int type " << lpProp[pp]->internal_type << std::endl;
+
+				PlyProperty vert_props[] = { /* list of property information for a vertex */
+					{ "x", PLY_FLOAT, PLY_FLOAT, offsetof(Vertex,x), 0, 0, 0, 0 },
+					{ "y", PLY_FLOAT, PLY_FLOAT, offsetof(Vertex,y), 0, 0, 0, 0 },
+					{ "z", PLY_FLOAT, PLY_FLOAT, offsetof(Vertex,z), 0, 0, 0, 0 },
+				};
+
+				//ply_get_element_setup(plyfile, elem_names[pi], 3, *lpProp);
+
+				//ply_get_element_setup(plyfile, elem_names[pi])
+
+				//pfdbg << "getting element" << std::endl;
+				//ply_get_element_setup(plyfile, elem_names[pi], 1, lpProp[pp]);
+				//void* elemPtr = nullptr;
+				//ply_get_element(plyfile, elemPtr);
+				//pfdbg << "got element" << std::endl;
+			}
+		}
+		pfdbg << "file type " << file_type << std::endl;
+		pfdbg << "version " << version << std::endl;
+		ply_close(plyfile);
+		pfdbg.flush();
+		pfdbg.close();
+	}
 
 	DDDCOMMON::TriangleMeshConfig m[3];
 	memset(&m[0], 0, 2 * sizeof(DDDCOMMON::TriangleMeshConfig));

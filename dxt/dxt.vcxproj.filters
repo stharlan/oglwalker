@@ -27,6 +27,9 @@
     <ClCompile Include="dddcommon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="plyfile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dx11i.h">
@@ -36,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="opengli.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ply.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

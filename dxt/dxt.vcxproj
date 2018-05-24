@@ -159,11 +159,13 @@ copy "$(ProjectDir)vshader.glsl" "$(OutputPath)"</Command>
     <ClCompile Include="dx11i.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="opengli.cpp" />
+    <ClCompile Include="plyfile.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dddcommon.h" />
     <ClInclude Include="dx11i.h" />
     <ClInclude Include="opengli.h" />
+    <ClInclude Include="ply.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

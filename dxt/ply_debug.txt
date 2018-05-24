@@ -1,0 +1,57 @@
+number of elements 2
+elem vertex
+	num elems 35947
+	num props 5
+		x
+		0 <= 1 = list; 0 = scalar;
+		 offset 7471205
+		 count ext 7929964
+		 count int 3276800
+		 count offst 3211310
+		 ext type 7
+		 int type 7340144
+		y
+		0 <= 1 = list; 0 = scalar;
+		 offset 6029433
+		 count ext 7012449
+		 count int 2949221
+		 count offst 3014707
+		 ext type 7
+		 int type 7471201
+		z
+		0 <= 1 = list; 0 = scalar;
+		 offset 6488169
+		 count ext 6881399
+		 count int 6553710
+		 count offst 7798895
+		 ext type 7
+		 int type 6750305
+		confidence
+		0 <= 1 = list; 0 = scalar;
+		 offset 2100931280
+		 count ext 2100908704
+		 count int 556
+		 count offst 0
+		 ext type 7
+		 int type 556
+		intensity
+		0 <= 1 = list; 0 = scalar;
+		 offset 2100908704
+		 count ext 2100930976
+		 count int 556
+		 count offst 0
+		 ext type 7
+		 int type 556
+elem face
+	num elems 69451
+	num props 1
+		vertex_indices
+		1 <= 1 = list; 0 = scalar;
+		 offset 122784640
+		 count ext 4
+		 count int 0
+		 count offst 36
+		 ext type 3
+		 int type 0
+file type 1
+version 1
