@@ -45,7 +45,8 @@ namespace SHOGL {
 		glm::vec4 color;
 		glm::vec3 normal;
 		glm::vec2 texture;
-	} glmvec12;
+		float lightmag;
+	} glmvec13;
 
 	DDDCOMMON::UserLocation loc = { 0.0f, 0.0f, 0.0f, 6.0f, 0.0f };
 
@@ -230,20 +231,21 @@ namespace SHOGL {
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		glm::vec3 EyeLoc = glm::vec3(loc.ex, loc.ey, loc.ez);
 		glm::vec3 EyeNormal = glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), loc.ey - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth)));
 
 		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
 			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 500.0f)
 			* glm::lookAt(
-				glm::vec3(loc.ex, loc.ey, loc.ez),
+				EyeLoc,
 				EyeNormal,
 				glm::vec3(0.0f, 1.0f, 0.0));
 
 		// set the perspective view matrix
 		glUniformMatrix4fv(gPerspectiveViewMatrix, 1, GL_FALSE, &unTransposedWorldMatrix[0][0]);
 
-		glm::vec3 LightPos(0.0f, 4.0f, 0.0f);
-		glUniform3fv(gLightPosId, 1, &LightPos[0]);
+		//glm::vec3 LightPos(0.0f, 4.0f, 0.0f);
+		glUniform3fv(gLightPosId, 1, &EyeLoc[0]);
 
 		for (UINT MeshIndex = 0; MeshIndex < NumMeshes; MeshIndex++) {
 
@@ -264,10 +266,11 @@ namespace SHOGL {
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VIBufferArray[meshes[MeshIndex].IBAIndex]);
 			glBindBuffer(GL_ARRAY_BUFFER, VIBufferArray[meshes[MeshIndex].VBAIndex]);
 
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)0);
-			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)12);
-			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)28);
-			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glmvec12), (const GLvoid*)40);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec13), (const GLvoid*)0);
+			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(glmvec13), (const GLvoid*)12);
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glmvec13), (const GLvoid*)28);
+			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(glmvec13), (const GLvoid*)40);
+			glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(glmvec13), (const GLvoid*)48);
 
 			glDrawElements(GL_TRIANGLES, meshes[MeshIndex].NumIndexes, GL_UNSIGNED_INT, 0);
 
@@ -308,7 +311,7 @@ namespace SHOGL {
 	BOOL InitGraphicsA(DDDCOMMON::TriangleMeshConfig* configs, int NumConfigs)
 	{
 
-		glmvec12 *GeometryVertices = nullptr;
+		glmvec13 *GeometryVertices13 = nullptr;
 		UINT* IndexArray = nullptr;
 
 		meshes = (TriangleMesh*)malloc(NumConfigs * sizeof(TriangleMesh));
@@ -323,25 +326,34 @@ namespace SHOGL {
 
 			DDDCOMMON::TriangleMeshConfig *m = configs + c;
 
-			GeometryVertices = (glmvec12*)malloc(m->NumPositions * sizeof(glmvec12));
-			memset(GeometryVertices, 0, m->NumPositions * sizeof(glmvec12));
+			GeometryVertices13 = (glmvec13*)malloc(m->NumPositions * sizeof(glmvec13));
+			memset(GeometryVertices13, 0, m->NumPositions * sizeof(glmvec13));
 			for (UINT i = 0; i < m->NumPositions; i++) {
-				GeometryVertices[i].position = m->positions[i];
-				GeometryVertices[i].normal = glm::normalize(m->normals[i]);
-				GeometryVertices[i].color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+				GeometryVertices13[i].position = m->positions[i];
+				GeometryVertices13[i].normal = glm::normalize(m->normals[i]);
+				GeometryVertices13[i].color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 				if (m->NumTexCoords > 0) {
-					GeometryVertices[i].texture = m->texcoords[i];
+					GeometryVertices13[i].texture = m->texcoords[i];
 				}
 				else {
-					GeometryVertices[i].texture = glm::vec2(0.5f, 0.5f);
+					GeometryVertices13[i].texture = glm::vec2(0.5f, 0.5f);
 				}
+
+				// to find the light magnitude
+				// 1. transpose the position using the model matrix (model matrix * pos4 (1.0))
+				// 2. calc light_pos - pos and normalize
+				// 3. transpose the normal vector usnig the model matrix (model matrix * nrm4 (0.0))
+				// 4. calc dot of 2 and 3
+				// 5. clamp 0 to 1
+
+				GeometryVertices13[i].lightmag = 1.0f;
 			}
 
 			glBindBuffer(GL_ARRAY_BUFFER, VIBufferArray[c]);
-			glBufferData(GL_ARRAY_BUFFER, m->NumPositions * sizeof(glmvec12), GeometryVertices, GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, m->NumPositions * sizeof(glmvec13), GeometryVertices13, GL_STATIC_DRAW);
 			meshes[c].VBAIndex = c;
 
-			free(GeometryVertices);
+			free(GeometryVertices13);
 
 			IndexArray = (UINT*)malloc(m->NumIndexes * sizeof(UINT));
 			memset(IndexArray, 0, m->NumIndexes * sizeof(UINT));

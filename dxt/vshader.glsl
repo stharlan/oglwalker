@@ -15,6 +15,11 @@ out vec2 TexCoord0;
 out vec4 Color0;
 out float LightMag;
 
+float log10( in float n ) { 
+	const float kLogBase10 = 1.0 / log2( 10.0 ); 
+	return log2( n ) * kLogBase10; 
+} 
+
 void main()
 {
 	// transform the position using the model matrix
@@ -31,8 +36,15 @@ void main()
 	TexCoord0 = TexCoord;
 	Color0 = Color;
 
+	// distance between light and pos
+	// subtract from 10 to invert
+	// clamp 1 to 10
+	// log10 to 0 to 1
+	float lmult = clamp(log10(20.0f - distance(gLightPos, (TransPos4).xyz)),0.0f,1.0f);
+
 	// if multiple lights, sum the light mag's
 	// and max to zero
 	// result of dot'ing these two will be -1 to 1
-	LightMag = max(dot(NormLightVector, TransNormal),0.0f);
+	LightMag = max(dot(NormLightVector, TransNormal),0.0f) * lmult;
+
 }

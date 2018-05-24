@@ -61,6 +61,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	LARGE_INTEGER pThisTime;
 	char TitleText[256];
 
+	/*
 	int nelems = 0;
 	char **elem_names = nullptr;
 	int file_type = 0;
@@ -89,7 +90,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 				pfdbg << "\t\t ext type " << lpProp[pp]->external_type << std::endl;
 				pfdbg << "\t\t int type " << lpProp[pp]->internal_type << std::endl;
 
-				PlyProperty vert_props[] = { /* list of property information for a vertex */
+				PlyProperty vert_props[] = {
 					{ "x", PLY_FLOAT, PLY_FLOAT, offsetof(Vertex,x), 0, 0, 0, 0 },
 					{ "y", PLY_FLOAT, PLY_FLOAT, offsetof(Vertex,y), 0, 0, 0, 0 },
 					{ "z", PLY_FLOAT, PLY_FLOAT, offsetof(Vertex,z), 0, 0, 0, 0 },
@@ -112,6 +113,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 		pfdbg.flush();
 		pfdbg.close();
 	}
+	*/
 
 	DDDCOMMON::TriangleMeshConfig m[3];
 	memset(&m[0], 0, 2 * sizeof(DDDCOMMON::TriangleMeshConfig));
