@@ -225,7 +225,8 @@ namespace SHOGL {
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glm::vec3 EyeNormal = glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), loc.ey - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth)));
+		glm::vec3 EyeDir = glm::normalize(glm::vec3(sinf(DEG2RAD(loc.azimuth)), sinf(DEG2RAD(loc.elevation)), cosf(DEG2RAD(loc.azimuth))));
+		glm::vec3 EyeNormal = glm::vec3(loc.ex - EyeDir.x, loc.ey - EyeDir.y, loc.ez - EyeDir.z);
 
 		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
 			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 500.0f)
@@ -241,7 +242,7 @@ namespace SHOGL {
 			glm::mat4x4 ThisWorld = unTransposedWorldMatrix * meshes[MeshIndex].model;			
 			glUniformMatrix4fv(WorldLocation, 1, GL_FALSE, &ThisWorld[0][0]);
 
-			glUniform3fv(EyeNormalId, 1, &EyeNormal[0]);
+			glUniform3fv(EyeNormalId, 1, &EyeDir[0]);
 
 			glEnableVertexAttribArray(0);
 			glEnableVertexAttribArray(1);

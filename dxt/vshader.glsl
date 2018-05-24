@@ -19,5 +19,5 @@ void main()
 	TexCoord0 = TexCoord;
 	Color0 = Color;
 	Normal0 = Normal;
-	LightMag = clamp(dot(Normal0, gEye), 0.0f, 1.0f);
+	LightMag = clamp(dot(Normal0, gEye), 0.5f, 1.0f);
 }
