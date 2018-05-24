@@ -35,8 +35,12 @@ namespace SHOGL {
 	TriangleMesh *meshes = nullptr;
 	GLuint NumMeshes = 0;
 	GLuint gShaderProgram = 0;
-	GLuint gPerspectiveViewMatrix = 0;
-	GLuint gModelMatrix = 0;
+	//GLuint gPerspectiveViewMatrix = 0;
+	//GLuint gModelMatrix = 0;
+	GLuint u_PMatrix;
+	GLuint u_VMatrix;
+	GLuint u_MMatrix;
+
 	GLuint gLightPosId = 0;
 	GLuint gSampler = 0;
 
@@ -212,11 +216,15 @@ namespace SHOGL {
 		glCullFace(GL_BACK);
 		glEnable(GL_CULL_FACE);
 
-		if (FALSE == CompileShaders("vshader.glsl", "fshader.glsl", &gShaderProgram)) return FALSE;
+		if (FALSE == CompileShaders("vshader2.glsl", "fshader2.glsl", &gShaderProgram)) return FALSE;
 
-		gPerspectiveViewMatrix = glGetUniformLocation(gShaderProgram, "gPerspectiveViewMatrix");
+		//gPerspectiveViewMatrix = glGetUniformLocation(gShaderProgram, "gPerspectiveViewMatrix");
 
-		gModelMatrix = glGetUniformLocation(gShaderProgram, "gModelMatrix");
+		//gModelMatrix = glGetUniformLocation(gShaderProgram, "gModelMatrix");
+
+		u_PMatrix = glGetUniformLocation(gShaderProgram, "u_PMatrix");
+		u_VMatrix = glGetUniformLocation(gShaderProgram, "u_VMatrix");
+		u_MMatrix = glGetUniformLocation(gShaderProgram, "u_MMatrix");
 
 		gLightPosId = glGetUniformLocation(gShaderProgram, "gLightPos");
 
@@ -234,15 +242,23 @@ namespace SHOGL {
 		glm::vec3 EyeLoc = glm::vec3(loc.ex, loc.ey, loc.ez);
 		glm::vec3 EyeNormal = glm::vec3(loc.ex - sinf(DEG2RAD(loc.azimuth)), loc.ey - sinf(DEG2RAD(loc.elevation)), loc.ez - cosf(DEG2RAD(loc.azimuth)));
 
-		glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
-			* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 500.0f)
-			* glm::lookAt(
-				EyeLoc,
-				EyeNormal,
-				glm::vec3(0.0f, 1.0f, 0.0));
+		//glm::mat4x4 unTransposedWorldMatrix = glm::mat4x4(1.0f)
+			//* glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 500.0f)
+			//* glm::lookAt(
+				//EyeLoc,
+				//EyeNormal,
+				//glm::vec3(0.0f, 1.0f, 0.0));
 
 		// set the perspective view matrix
-		glUniformMatrix4fv(gPerspectiveViewMatrix, 1, GL_FALSE, &unTransposedWorldMatrix[0][0]);
+		//glUniformMatrix4fv(gPerspectiveViewMatrix, 1, GL_FALSE, &unTransposedWorldMatrix[0][0]);
+
+		glm::mat4x4 pMatrix = glm::mat4x4(1.0f) *
+			glm::perspective(glm::radians(45.0f), (float)gScreenWidth / (float)gScreenHeight, 0.1f, 500.0f);
+		glUniformMatrix4fv(u_PMatrix, 1, GL_FALSE, &pMatrix[0][0]);
+
+		glm::mat4x4 vMatrix = glm::mat4x4(1.0f) *
+			glm::lookAt(EyeLoc, EyeNormal, glm::vec3(0.0f, 1.0f, 0.0));
+		glUniformMatrix4fv(u_VMatrix, 1, GL_FALSE, &vMatrix[0][0]);
 
 		//glm::vec3 LightPos(0.0f, 4.0f, 0.0f);
 		glUniform3fv(gLightPosId, 1, &EyeLoc[0]);
@@ -252,7 +268,8 @@ namespace SHOGL {
 			glFrontFace(meshes[MeshIndex].Winding);
 
 			// set the model matrix
-			glUniformMatrix4fv(gModelMatrix, 1, GL_FALSE, &meshes[MeshIndex].model[0][0]);
+			//glUniformMatrix4fv(gModelMatrix, 1, GL_FALSE, &meshes[MeshIndex].model[0][0]);
+			glUniformMatrix4fv(u_MMatrix, 1, GL_FALSE, &meshes[MeshIndex].model[0][0]);
 
 			glEnableVertexAttribArray(0);
 			glEnableVertexAttribArray(1);
