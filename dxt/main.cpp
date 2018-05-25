@@ -130,10 +130,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 	m[0].TextureId = 0;
 	
 	glm::vec3 positions[] = {
-		glm::vec3(-50, 0, -50),
-		glm::vec3(50, 0, -50),
-		glm::vec3(50, 0, 50),
-		glm::vec3(-50, 0, 50)
+		glm::vec3(-50, -10, -50),
+		glm::vec3(50, -10, -50),
+		glm::vec3(50, -10, 50),
+		glm::vec3(-50, -10, 50)
 	};
 	glm::vec3 normals[] = {
 		glm::vec3(0, 1, 0),
@@ -209,7 +209,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PWSTR pCmdLine, int nC
 #ifdef USING_OPENGL
 	if (FALSE == SHOGL::Init(hWnd, SCREEN_WIDTH, SCREEN_HEIGHT)) return 0;
 	if (FALSE == SHOGL::InitPipeline()) return 0;
-	if (FALSE == SHOGL::InitGraphicsA(&m[0], 2)) return 0;
+	if (FALSE == SHOGL::InitGraphicsA(&m[0], 3)) return 0;
 	if (FALSE == SHOGL::InitTextures(TextureVector)) return 0;
 #endif
 #ifdef USING_DIRECTX11
