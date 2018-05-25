@@ -21,6 +21,8 @@ out vec4 v_Color;          // This will be passed into the fragment shader.
 out vec3 v_Normal;         // This will be passed into the fragment shader.
 out vec2 v_TexCoord;
  
+out vec3 v_LightPos0;
+
 // The entry point for our vertex shader.
 // pvm p*v*m
 void main()
@@ -31,6 +33,7 @@ void main()
 
     // Transform the vertex into eye space.
     v_Position = vec3(u_MVMatrix * vec4(a_Position,1.0)).xyz;
+	v_LightPos0 = vec3(u_MVMatrix * vec4(-10.0f, 8.0f, -20.0f, 1.0f)).xyz;
  
     // Pass through the color.
     v_Color = a_Color;

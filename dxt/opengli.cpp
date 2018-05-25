@@ -226,7 +226,7 @@ namespace SHOGL {
 		u_VMatrix = glGetUniformLocation(gShaderProgram, "u_VMatrix");
 		u_MMatrix = glGetUniformLocation(gShaderProgram, "u_MMatrix");
 
-		gLightPosId = glGetUniformLocation(gShaderProgram, "gLightPos");
+		gLightPosId = glGetUniformLocation(gShaderProgram, "u_LightPos");
 
 		gSampler = glGetUniformLocation(gShaderProgram, "gSampler");
 
@@ -260,8 +260,9 @@ namespace SHOGL {
 			glm::lookAt(EyeLoc, EyeNormal, glm::vec3(0.0f, 1.0f, 0.0));
 		glUniformMatrix4fv(u_VMatrix, 1, GL_FALSE, &vMatrix[0][0]);
 
-		//glm::vec3 LightPos(0.0f, 4.0f, 0.0f);
-		glUniform3fv(gLightPosId, 1, &EyeLoc[0]);
+		// in eye coords, light is on the eye 0,0,0
+		glm::vec3 LightPos(0.0f, 0.0f, 0.0f);
+		glUniform3fv(gLightPosId, 1, &LightPos[0]);
 
 		for (UINT MeshIndex = 0; MeshIndex < NumMeshes; MeshIndex++) {
 
